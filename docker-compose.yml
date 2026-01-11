@@ -1,4 +1,5 @@
 services:
+  # PostgreSQL Service
   db:
     image: postgres:15
     container_name: postgresql
@@ -10,9 +11,20 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - backend
+  # Redis Service
+  redis:
+    image: redis:7
+    container_name: redis_cache
+    restart: always
+    env_file: .env
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   backend:
