@@ -268,3 +268,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# Ignore docs/temp
+docs/temp/
