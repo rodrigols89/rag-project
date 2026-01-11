@@ -12,6 +12,7 @@
  - [`Criando o container com PostgreSQL (db)`](#db-container)
  - [`Criando o container com Redis (redis_cache)`](#redis-container)
  - [`Script de inicialização do serviço web (entrypoint.sh)`](#entrypoint-sh)
+ - [`Criando o Dockerfile do serviço web`](#web-dockerfiler)
 <!---
 [WHITESPACE RULES]
 - "40" Whitespace character.
@@ -1269,6 +1270,164 @@ else
     exec "$@"
 fi
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+<div id="web-dockerfiler"></div>
+
+## `Criando o Dockerfile do serviço web`
+
+Antes de criar o container contendo o *Django* e o *Uvicorn*, vamos criar o nosso Dockerfile...
+
+> **Mas por que eu preciso de um Dockerfile para o Django + Uvicorn?**
+
+**NOTE:**  
+O Dockerfile é onde você diz **como** essa imagem será construída.
+
+> **O que o Dockerfile faz nesse caso?**
+
+ - Escolhe a imagem base (ex.: python:3.12-slim) para rodar o Python.
+ - Instala as dependências do sistema (por exemplo, libpq-dev para PostgreSQL).
+ - Instala as dependências Python (pip install -r requirements.txt).
+ - Copia o código do projeto para dentro do container.
+ - Define o diretório de trabalho (WORKDIR).
+ - Configura o comando de entrada.
+ - Organiza assets estáticos e outras configurações.
+
+> **Quais as vantagens de usar o Dockerfile?**
+
+ - **Reprodutibilidade:**
+   - Qualquer pessoa consegue subir seu projeto com o mesmo ambiente que você usa.
+ - **Isolamento:**
+   - Evita conflitos de versão no Python e dependências.
+ - **Customização:**
+   - Você pode instalar pacotes de sistema ou bibliotecas específicas.
+ - **Portabilidade:**
+   - Mesma imagem funciona no seu PC, no servidor ou no CI/CD.
+
+O nosso [Dockerfile](../Dockerfile) vai ficar da seguinte maneira:
+
+[Dockerfile](../Dockerfile)
+```bash
+# ===============================
+# 1️⃣ Imagem base
+# ===============================
+FROM python:3.12-slim
+
+# ===============================
+# 2️⃣ Configuração de ambiente
+# ===============================
+WORKDIR /code
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONPATH=/code
+
+# ===============================
+# 3️⃣ Dependências do sistema
+# ===============================
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    netcat-traditional \
+    bash \
+    gosu \
+    && rm -rf /var/lib/apt/lists/*
+
+# ===============================
+# 4️⃣ Instalar dependências Python
+# ===============================
+COPY requirements-dev.txt /code/
+RUN pip install --upgrade pip && pip install -r requirements-dev.txt
+
+# ===============================
+# 5️⃣ Copiar código do projeto
+# ===============================
+COPY . /code/
+
+# ===============================
+# 6️⃣ Ajustes de produção
+# ===============================
+# Criar usuário não-root para segurança
+RUN adduser --disabled-password --no-create-home appuser && \
+    chown -R appuser /code
+
+# Copia e configura o entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Define o entrypoint (roda como root para ajustar permissões)
+# O entrypoint vai mudar para appuser antes de executar o comando
+ENTRYPOINT ["/entrypoint.sh"]
+
+# Mantém como root no Dockerfile - o entrypoint gerencia a mudança de usuário
+# Isso permite que o entrypoint ajuste permissões antes de mudar para appuser
+
+# ===============================
+# 7️⃣ Porta exposta (Uvicorn usa 8000 por padrão)
+# ===============================
+EXPOSE 8000
+
+# ===============================
+# 8️⃣ Comando padrão
+# ===============================
+# Mantém o container rodando e abre um shell se usado com
+# `docker run` sem sobrescrever comando.
+CMD ["bash"]
+```
+
+> **NOTE:**  
+> Acredito que o [Dockerfile](../Dockerfile) está bem descritivo, por isso não vou comentar os comandos.
 
 ---
 
