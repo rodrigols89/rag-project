@@ -5,10 +5,12 @@
 ## Conteúdo
 
  - [`Adicionando .editorconfig e .gitignore`](#editorconfig-gitignore)
+ - [`Criando variáveis de Ambiente (.env.dev, .env.prod e .env.example)`](#env-variables)
  - [`Iniciando o projeto com "poetry init"`](#poetry-init)
  - [`Instalando e configurando o Taskipy`](#taskipy-settings-pyproject)
  - [`Instalando/Configurando/Exportando o Django + Uvicorn`](#django-settings)
  - [`Criando o container com PostgreSQL (db)`](#db-container)
+ - [`Criando o container com Redis (redis_cache)`](#redis-container)
 <!---
 [WHITESPACE RULES]
 - "40" Whitespace character.
@@ -149,6 +151,231 @@ indent_size = 2
 
 
 
+
+---
+
+<div id="env-variables"></div>
+
+## `Criando variáveis de Ambiente (.env.dev, .env.prod e .env.example)`
+
+> **Nunca reutilize o mesmo `.env` para *dev* e *prod*.**
+
+ - Mesmo em projeto pessoal.
+ - Isso evita 90% dos acidentes.
+
+### `🎯 Objetivo`
+
+Ter:
+
+ - Variáveis claramente separadas por ambiente
+ - Zero risco de misturar dev ↔ prod
+ - Fácil uso no Docker Compose, Django e CI
+
+**✅ Estrutura recomendada de arquivos:**
+```bash
+.env.dev
+.env.prod
+.env.example
+```
+
+ - `.env.dev (desenvolvimento)`
+   - Nomes explícitos
+   - Senha fraca OK (local)
+   - DEBUG=True
+   - Ambiente identificado
+ - `.env.prod (produção)`
+   - Senhas fortes
+   - DEBUG=False
+   - Nada que sugira dev
+ - `.env.example (para versionar)`
+   - Pode ser comitado como exemplo
+
+### `Como usar isso no Django?`
+
+[core/settings.py](../core/settings.py)
+```python
+import os
+
+DJANGO_ENV = os.getenv("DJANGO_ENV", "dev")
+DEBUG = os.getenv("DEBUG") == "True"
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ["POSTGRES_DB"],
+        "USER": os.environ["POSTGRES_USER"],
+        "PASSWORD": os.environ["POSTGRES_PASSWORD"],
+        "HOST": os.environ["POSTGRES_HOST"],
+        "PORT": os.environ["POSTGRES_PORT"],
+    }
+}
+```
+
+ - 📌 Simples
+ - 📌 Explícito
+ - 📌 Sem mágica
+
+### `🔐 Segurança (nota importante)`
+
+Mesmo em produção:
+
+ - Não coloque `.env.prod` no repositório
+ - Em cloud:
+   - Use secrets (GitHub Actions, Docker secrets, etc.)
+ - Local prod (VPS):
+   - Arquivo `.env.prod` fora do repo
+
+### `📄 .env.example`
+
+O [.env.example](../.env.example) é o contrato do projeto, então ele precisa ser didático, completo e seguro.
+
+> **👉 Esse arquivo PODE e DEVE ser versionado.**
+
+[.env.example](../.env.example)
+```bash
+# ============================================================================
+# CONFIGURAÇÃO DO POSTGRESQL
+# ============================================================================
+POSTGRES_DB=                # Nome do banco de dados a ser criado (ex: rag_dev, rag_prod)
+POSTGRES_USER=              # Usuário do banco de dados
+POSTGRES_PASSWORD=          # Senha do banco de dados
+POSTGRES_HOST=db            # Nome do serviço (container) do banco no docker-compose
+POSTGRES_PORT=5432          # Porta padrão do PostgreSQL
+
+
+# ============================================================================
+# CONFIGURAÇÃO DO REDIS
+# ============================================================================
+REDIS_HOST=redis            # Nome do serviço (container) do Redis no docker-compose
+REDIS_PORT=6379             # Porta padrão do Redis
+
+
+# ============================================================================
+# CONFIGURAÇÃO DO DJANGO
+# ============================================================================
+DJANGO_SECRET_KEY=          # Chave secreta do Django (NUNCA versionar valores reais)
+DJANGO_DEBUG=               # True = Desenvolvimento | False = Produção
+DJANGO_ALLOWED_HOSTS=       # Hosts permitidos (ex: *, localhost, dominio.com)
+
+# ID do site para o framework de sites do Django (usado pelo django-allauth)
+DJANGO_SITE_ID=1            # Geralmente 1
+DJANGO_SITE_DOMAIN=         # Dominio do site (ex: localhost ou seu-dominio.com)
+DJANGO_SITE_NAME=           # Nome exibido do site
+
+
+# ============================================================================
+# CONFIGURAÇÃO DO UVICORN
+# ============================================================================
+UVICORN_HOST=0.0.0.0        # 0.0.0.0 = escutar em todas as interfaces (Docker)
+UVICORN_PORT=8000           # Porta interna do app Django
+
+
+# ============================================================================
+# CONFIGURAÇÃO DO CELERY
+# ============================================================================
+CELERY_BROKER_URL=          # URL do broker do Celery (ex: redis://redis:6379/0)
+CELERY_RESULT_BACKEND=      # URL do backend de resultados (ex: redis://redis:6379/1)
+
+# Executa tasks de forma síncrona (sem fila) quando True
+# Útil para testes unitários
+CELERY_TASK_ALWAYS_EAGER=   # True ou False
+
+# Propaga exceções quando tasks são executadas de forma eager
+# Útil para debugging em testes
+CELERY_TASK_EAGER_PROPAGATES=  # True ou False
+
+
+# ============================================================================
+# CONFIGURAÇÕES DO SUPERUSUÁRIO INICIAL
+# ============================================================================
+DJANGO_SUPERUSER_USERNAME=  # Nome de usuário do superusuário inicial
+DJANGO_SUPERUSER_EMAIL=     # Email do superusuário inicial
+DJANGO_SUPERUSER_PASSWORD=  # Senha do superusuário inicial
+
+
+# ============================================================================
+# CONFIGURAÇÕES DE AUTENTICAÇÃO SOCIAL (OAUTH2)
+# ============================================================================
+# Client ID do Google OAuth2
+GOOGLE_CLIENT_ID=           # Client ID fornecido pelo Google
+
+# Client Secret do Google OAuth2
+GOOGLE_CLIENT_SECRET=       # Client Secret fornecido pelo Google
+
+# Client ID do GitHub OAuth2
+GITHUB_CLIENT_ID=           # Client ID fornecido pelo GitHub
+
+# Client Secret do GitHub OAuth2
+GITHUB_CLIENT_SECRET=       # Client Secret fornecido pelo GitHub
+```
+
+### `Vendo as variáveis de ambiente dentro do container`
+
+Uma coisa interessante é verificar se essas variáveis de ambiente estão sendo reconhecidas dentro do container:
+
+```bash
+docker inspect <container-name> --format='{{.Config.Env}}'
+```
+
+**OUTPUT:**
+```bash
+[DJANGO_SITE_ID=1 DJANGO_SUPERUSER_USERNAME=drigols REDIS_HOST=redis POSTGRES_HOST=db DJANGO_SUPERUSER_PASSWORD=drigols GOOGLE_CLIENT_SECRET=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 CELERY_TASK_ALWAYS_EAGER=False GOOGLE_CLIENT_ID=265398246169-0eppnll3l45mhkppo08r02lapoj0a35i.apps.googleusercontent.com CELERY_BROKER_URL=redis://redis:6379/0 GITHUB_CLIENT_SECRET=fabc42b71aef3341ac8693d680b3c756ac82d03d CELERY_TASK_EAGER_PROPAGATES=True UVICORN_PORT=8000 POSTGRES_USER=rag_user_dev REDIS_PORT=6379 UVICORN_HOST=0.0.0.0 GITHUB_CLIENT_ID=Ov23lidBPkHBQ0NCKEM2 DJANGO_SECRET_KEY=django-insecure-dev-key POSTGRES_PORT=5432 CELERY_RESULT_BACKEND=redis://redis:6379/1 DJANGO_SUPERUSER_EMAIL=drigols.creative@gmail.com DJANGO_SITE_DOMAIN=localhost POSTGRES_PASSWORD=rag_pass_dev DJANGO_ALLOWED_HOSTS=* DJANGO_DEBUG=True DJANGO_SITE_NAME=Localhost POSTGRES_DB=rag_dev PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/postgresql/15/bin GOSU_VERSION=1.19 LANG=en_US.utf8 PG_MAJOR=15 PG_VERSION=15.15-1.pgdg13+1 PGDATA=/var/lib/postgresql/data]
+```
+
+> **NOTE:**  
+> Uma observação aqui é que vamos continuar utilizando só um [.env](../.env) porque nosso projeto por agora só vai utilizar um único [docker-compose.yml](../docker-compose.yml.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ---
 
 <div id="poetry-init"></div>
@@ -160,6 +387,7 @@ Agora vamos iniciar nosso projeto com `poetry init`:
 ```bash
 poetry init
 ```
+
 
 
 
@@ -374,6 +602,17 @@ Agora, vamos gerar o `requirements.txt` de *produção*:
 poetry export --without-hashes --format=requirements.txt --output=requirements.txt
 ```
 
+Também seria interessante criar comandos Taskipy para esse processo de exportar as dependências:
+
+[pyproject.toml](../pyproject.toml)
+```toml
+[tool.taskipy.tasks]
+# ------------------ ( Project Management ) -----------------
+exportdev = "poetry export --without-hashes --with dev --format=requirements.txt --output=requirements-dev.txt"
+exportprod = "poetry export --without-hashes --format=requirements.txt --output=requirements.txt"
+```
+
+
 
 
 
@@ -442,7 +681,7 @@ poetry export --without-hashes --format=requirements.txt --output=requirements.t
  - **Desvantagens:**
    - Mais pesado que bancos NoSQL para dados muito simples.
 
-Antes de criar nosso container contendo o *PostgreSQL* vamos criar as variáveis de ambiente para esse container:
+Antes de criar nosso container contendo o PostgreSQL vamos criar as variáveis de ambiente para esse container:
 
 [.env](../.env)
 ```bash
@@ -462,11 +701,28 @@ POSTGRES_PORT=5432         # Porta padrão do PostgreSQL
  - `POSTGRES_HOST` → para o Django se conectar, usamos o nome do serviço (db), não localhost, pois ambos estão na mesma rede docker.
  - `POSTGRES_PORT` → porta padrão 5432.
 
-Agora nós vamos criar o compose `base` que vai ter as configurações base dos nossos containers:
+Continuando, o arquivo [docker-compose.yml](../docker-compose.yml) para o nosso container *PostgreSQL* ficará assim:
 
 [docker-compose.yml](../docker-compose.yml)
 ```yml
+services:
+  db:
+    image: postgres:15
+    container_name: postgresql
+    restart: always
+    env_file: .env
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
 
+volumes:
+  postgres_data:
+
+networks:
+  backend:
 ```
 
  - `db`
@@ -493,127 +749,36 @@ Agora nós vamos criar o compose `base` que vai ter as configurações base dos 
  - `networks: backend`
    - Coloca o container na rede backend para comunicação interna segura.
 
-Continuando, agora nós vamos criar o compose de `desenvolvimento` que terá as configurações de *desenvolvimento*:
+Aqui, também seria interessante ter comando Taskipy para gerenciar nossos containers:
 
-[docker-compose.dev.yml](../docker-compose.dev.yml)
-```yml
-
+[pyproject.toml](../pyproject.toml)
+```toml
+[tool.taskipy.tasks]
+# -------------- ( General Docker Management ) --------------
+start_compose = 'docker compose up -d'
+down_compose = 'docker compose down'
+restart_compose = 'docker restart $(docker ps -q)'
+build_compose = 'docker compose up --build -d'
+clean_compose = """
+docker stop $(docker ps -aq) 2>/dev/null || true &&
+docker rm $(docker ps -aq) 2>/dev/null || true &&
+docker rmi -f $(docker images -aq) 2>/dev/null || true &&
+docker volume rm $(docker volume ls -q) 2>/dev/null || true &&
+docker system prune -a --volumes -f
+"""
 ```
 
-Por fim, vamos criar o compose de `produção` que terá as configurações de *produção*:
-
-[docker-compose.prod.yml](../docker-compose.prod.yml)
-```yml
-# --------------- ( Docker (dev) Management ) ---------------
-start_dev = "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d"
-down_dev = "docker compose -f docker-compose.yml -f docker-compose.dev.yml down"
-restart_dev = "docker compose -f docker-compose.yml -f docker-compose.dev.yml restart"
-build_dev = "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d"
-# -------------- ( Docker (prod) Management ) ---------------
-start_prod = "docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d"
-down_prod = "docker compose -f docker-compose.yml -f docker-compose.prod.yml down"
-restart_prod = "docker compose -f docker-compose.yml -f docker-compose.prod.yml restart"
-build_prod = "docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d"
-```
-
-Ótimo, agora é só subir o container:
+Ótimo, agora vamos subir o container:
 
 ```bash
-task start_dev
-```
-
-Agora, vamos ver o log do container para ver se está tudo ok:
-
-```bash
-docker logs rag-project-db-1
-```
-
-**OUTPUT:**
-```bash
-2026-01-11 16:06:12.671 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
-2026-01-11 16:06:12.671 UTC [1] LOG:  listening on IPv6 address "::", port 5432
-2026-01-11 16:06:12.675 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
-2026-01-11 16:06:12.680 UTC [64] LOG:  database system was shut down at 2026-01-11 16:06:12 UTC
-2026-01-11 16:06:12.684 UTC [1] LOG:  database system is ready to accept connections
-2026-01-11 16:06:21.782 UTC [75] FATAL:  database "raguser" does not exist
-2026-01-11 16:06:30.376 UTC [83] FATAL:  database "raguser" does not exist
-2026-01-11 16:06:40.466 UTC [91] FATAL:  database "raguser" does not exist
-```
-
-> **What?**
-
- - 👉 O PostgreSQL está tentando conectar a um banco chamado raguser
- - 👉 mas o banco que deveria existir é rag_db (pelo seu .env)
-
-Para resolver esse problema, primeiro vamos entender como o PostgreSQL decide qual banco conectar:
-
- - **1️⃣ Como o Postgres decide qual banco conectar?**
-   - Quando nenhum banco é especificado, o Postgres tenta conectar em:
-     - `database = username`
-   - Ou seja:
-     - `POSTGRES_USER=raguser`
-   - Ele tenta abrir automaticamente:
-     - `database = raguser`
-   - Mas você configurou (.env):
-     - `POSTGRES_DB=rag_db`
-   - Então:
-     - ✅ Banco criado: `rag_db`
-     - ❌ Banco tentado: `raguser`
-   - Resultado:
-     - *"database "raguser" does not exist"*
- - **2️⃣ O detalhe MAIS IMPORTANTE: volume persistente:**
-   - Você está usando:
-     - `volumes: postgres_data:/var/lib/postgresql/data`
-     - ⚠️ O Postgres só cria o banco (POSTGRES_DB) na PRIMEIRA inicialização do volume.
-   - Se o volume já existia antes:
-     - Ele IGNORA completamente:
-       - `POSTGRES_DB`
-       - `POSTGRES_USER`
-       - `POSTGRES_PASSWORD`
-   - 👉 As variáveis não são reaplicadas.
-
-> **Ok, mas como eu posso resolver isso de uma maneira simples?**
-
-**⚠️ APAGA TODOS OS DADOS:**
-```bash
-docker compose down -v
-docker compose up -d
-```
-
- - ✔️ Volume recriado
- - ✔️ `POSTGRES_DB=rag_db` criado corretamente
- - ✔️ Erro desaparece
-
-> **NOTE:**  
-> 👉 Essa é a solução recomendada para desenvolvimento.
-
-Agora, vamos subir o container novamente e ver o log:
-
-```bash
-task start_dev
-```
-
-```bash
-docker logs rag-project-db-1
-```
-
-**OUTPUT:**
-```bash
-PostgreSQL init process complete; ready for start up.
-
-2026-01-11 16:36:11.730 UTC [1] LOG:  starting PostgreSQL 15.15 (Debian 15.15-1.pgdg13+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
-2026-01-11 16:36:11.730 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
-2026-01-11 16:36:11.730 UTC [1] LOG:  listening on IPv6 address "::", port 5432
-2026-01-11 16:36:11.864 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
-2026-01-11 16:36:11.871 UTC [64] LOG:  database system was shut down at 2026-01-11 16:36:11 UTC
-2026-01-11 16:36:11.976 UTC [1] LOG:  database system is ready to accept connections
+task start_compose
 ```
 
 Ótimo, agora se você desejar se conectar nesse Banco de Dados via *bash* utilize o seguinte comando (As vezes é necessário esperar o container/banco de dados subir):
 
-**Entrar no container "postgres_db" via bash:**
+**Entrar no container "postgresql" via bash:**
 ```bash
-docker exec -it rag-project-db-1 bash
+docker exec -it postgresql bash
 ```
 
 **Entra no banco de sados a partir das variáveis de ambiente:**
