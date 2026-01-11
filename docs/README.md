@@ -291,22 +291,6 @@ CELERY_TASK_EAGER_PROPAGATES=  # True ou False
 DJANGO_SUPERUSER_USERNAME=  # Nome de usuário do superusuário inicial
 DJANGO_SUPERUSER_EMAIL=     # Email do superusuário inicial
 DJANGO_SUPERUSER_PASSWORD=  # Senha do superusuário inicial
-
-
-# ============================================================================
-# CONFIGURAÇÕES DE AUTENTICAÇÃO SOCIAL (OAUTH2)
-# ============================================================================
-# Client ID do Google OAuth2
-GOOGLE_CLIENT_ID=           # Client ID fornecido pelo Google
-
-# Client Secret do Google OAuth2
-GOOGLE_CLIENT_SECRET=       # Client Secret fornecido pelo Google
-
-# Client ID do GitHub OAuth2
-GITHUB_CLIENT_ID=           # Client ID fornecido pelo GitHub
-
-# Client Secret do GitHub OAuth2
-GITHUB_CLIENT_SECRET=       # Client Secret fornecido pelo GitHub
 ```
 
 ### `Vendo as variáveis de ambiente dentro do container`
