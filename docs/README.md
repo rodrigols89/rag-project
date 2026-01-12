@@ -13,6 +13,8 @@
  - [`Criando o container com Redis (redis_cache)`](#redis-container)
  - [`Script de inicialização do serviço web (entrypoint.sh)`](#entrypoint-sh)
  - [`Criando o Dockerfile do serviço web`](#web-dockerfiler)
+ - [`Criando o docker compose para o container web`](#web-docker-compose)
+ - [`Configurando o Django para reconhecer o PostgreSQL (+ .env) como Banco de Dados`](#django-postgresql-settings)
 <!---
 [WHITESPACE RULES]
 - "40" Whitespace character.
@@ -1428,6 +1430,425 @@ CMD ["bash"]
 
 > **NOTE:**  
 > Acredito que o [Dockerfile](../Dockerfile) está bem descritivo, por isso não vou comentar os comandos.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+<div id="web-docker-compose"></div>
+
+#### `Criando o docker compose para o container web`
+
+> Aqui vamos entender e criar um container contendo o `Django` e o `Uvicorn`.
+
+ - **Função:**
+   - Executar a aplicação Django em produção.
+ - **Quando usar:**
+   - Sempre para servir sua aplicação backend.
+ - **Vantagens:**
+   - Uvicorn é um servidor WSGI otimizado para produção.
+   - Separa lógica da aplicação da entrega de arquivos estáticos.
+ - **Desvantagens:**
+   - Não serve arquivos estáticos eficientemente.
+
+Antes de criar nosso container contendo o *Django* e o *Uvicorn*, vamos criar as variáveis de ambiente para esse container:
+
+[.env](../.env)
+```bash
+# ============================================================================
+# CONFIGURAÇÃO DO DJANGO
+# ============================================================================
+DJANGO_SECRET_KEY=djangopass                      # Chave secreta do Django para criptografia e segurança
+DJANGO_DEBUG=True                                 # Tru=Dev / False=Prod
+DJANGO_ALLOWED_HOSTS=*                            # '*' = libera para qualquer host (apenas desenvolvimento)
+DJANGO_SUPERUSER_USERNAME=drigols                 # Nome de usuário do superusuário
+DJANGO_SUPERUSER_EMAIL=drigols.creative@gmail.com # Email do superusuário
+DJANGO_SUPERUSER_PASSWORD=drigols                 # Senha do superusuário
+# ID do site para o framework de sites do Django (usado pelo allauth)
+DJANGO_SITE_ID=1
+DJANGO_SITE_DOMAIN=localhost
+DJANGO_SITE_NAME=Localhost
+
+
+
+# ============================================================================
+# CONFIGURAÇÃO DO UVICORN
+# ============================================================================
+UVICORN_HOST=0.0.0.0  # 0.0.0.0 = escutar em todas as interfaces (Docker)
+UVICORN_PORT=8000     # Porta interna do app Django
+```
+
+Continuando, o arquivo [docker-compose.yml](../docker-compose.yml) para o nosso container *web* ficará assim:
+
+[docker-compose.yml](../docker-compose.yml)
+```yml
+services:
+  # Django/Uvicorn Service
+    web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: django
+    restart: always
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings
+    command: >
+      sh -c "
+      until nc -z ${POSTGRES_HOST} ${POSTGRES_PORT}; do
+        echo '⏳ Waiting for Postgres...';
+        sleep 2;
+      done &&
+      python manage.py migrate &&
+      python manage.py collectstatic --noinput &&
+      python manage.py runserver ${DJANGO_HOST:-0.0.0.0}:${DJANGO_PORT:-8000}
+      "
+    volumes:
+      - .:/code
+      - ./static:/code/staticfiles
+      - ./media:/code/media
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "${UVICORN_PORT}:${UVICORN_PORT}"
+    networks:
+      - backend
+
+networks:
+  backend:
+```
+
+> **Uma dúvida... tudo que eu modifico no meu projeto principal é alterado no container?**
+
+**SIM!**  
+No nosso caso, sim — porque no serviço `web` você fez este mapeamento:
+
+[docker-compose.yml](../docker-compose.yml)
+```yaml
+volumes:
+  - .:/code
+```
+
+Isso significa que:
+
+ - O diretório atual no seu `host (.)` é montado dentro do container em `/code`.
+ - Qualquer alteração nos arquivos do seu projeto no host aparece instantaneamente no container.
+ - E o inverso também vale: se você mudar algo dentro do container nessa pasta, muda no seu host.
+
+Por fim, vamos subir o container web:
+
+```bash
+task start_compose
+```
+
+Se tudo ocorrer bem você pode abrir no navegador:
+
+ - [http://localhost:8000/](http://localhost:8000/)
+
+Aqui, você também pode ver os logs do container:
+
+```bash
+task logs django
+```
+
+**OUTPUT:**
+```bash
+docker logs django
+Operations to perform:
+  Apply all migrations: admin, auth, contenttypes, sessions
+Running migrations:
+  Applying contenttypes.0001_initial... OK
+  Applying auth.0001_initial... OK
+  Applying admin.0001_initial... OK
+  Applying admin.0002_logentry_remove_auto_add... OK
+  Applying admin.0003_logentry_add_action_flag_choices... OK
+  Applying contenttypes.0002_remove_content_type_name... OK
+  Applying auth.0002_alter_permission_name_max_length... OK
+  Applying auth.0003_alter_user_email_max_length... OK
+  Applying auth.0004_alter_user_username_opts... OK
+  Applying auth.0005_alter_user_last_login_null... OK
+  Applying auth.0006_require_contenttypes_0002... OK
+  Applying auth.0007_alter_validators_add_error_messages... OK
+  Applying auth.0008_alter_user_username_max_length... OK
+  Applying auth.0009_alter_user_last_name_max_length... OK
+  Applying auth.0010_alter_group_name_max_length... OK
+  Applying auth.0011_update_proxy_permissions... OK
+  Applying auth.0012_alter_user_first_name_max_length... OK
+  Applying sessions.0001_initial... OK
+
+130 static files copied to '/code/staticfiles'.
+Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+January 12, 2026 - 00:06:52
+Django version 6.0.1, using settings 'core.settings'
+Starting development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/6.0/howto/deployment/
+[12/Jan/2026 00:07:13] "GET / HTTP/1.1" 200 12068
+Not Found: /favicon.ico
+[12/Jan/2026 00:07:13] "GET /favicon.ico HTTP/1.1" 404 2206
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+<div id="django-postgresql-settings"></div>
+
+## `Configurando o Django para reconhecer o PostgreSQL (+ .env) como Banco de Dados`
+
+Antes de começar a configurar o Django para reconhecer o PostgreSQL como Banco de Dados, vamos fazer ele reconhecer as variáveis de ambiente dentro de [core/settings.py](../core/settings.py).
+
+Primeiro, vamos instalar o `python-dotenv` e `psycopg2-binary`:
+
+```bash
+poetry add python-dotenv@latest
+```
+
+```bash
+poetry add psycopg2-binary@latest
+```
+
+**NOTE:**  
+Aqui também vai ser importante lembrar de exportar essas bibliotecas nos nossos [requirements.txt](../requirements.txt) e [requirements-dev.txt](../requirements-dev.txt):
+
+```bash
+task exportdev
+```
+
+```bash
+task exportprod
+```
+
+Ótimo, agora vamos iniciar uma instância de `python-dotenv`:
+
+[core/settings.py](../core/settings.py)
+```python
+import os
+
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
+```
+
+> **E agora, como testar que está funcionando?**
+
+Primeiro, imagine que nós temos as seguinte variáveis de ambiente:
+
+[.env](../.env)
+```bash
+# ============================================================================
+# CONFIGURAÇÃO DO POSTGRESQL
+# ============================================================================
+POSTGRES_DB=rag_db         # Nome do banco de dados a ser criado
+POSTGRES_USER=raguser      # Usuário do banco de dados
+POSTGRES_PASSWORD=ragpass  # Senha do banco de dados
+POSTGRES_HOST=db           # Nome do serviço (container) do banco no docker-compose
+POSTGRES_PORT=5432         # Porta padrão do PostgreSQL
+```
+
+Agora vamos abrir um **shell interativo do Django**, ou seja, um terminal Python (REPL) com o Django já carregado, permitindo testar código com acesso total ao projeto.
+
+É parecido com abrir um python normal, mas com estas diferenças:
+
+| Recurso                           | Python normal | `manage.py shell` |
+| --------------------------------- | ------------- | ----------------- |
+| Carrega o Django automaticamente  | ❌ Não       | ✅ Sim            |
+| Consegue acessar `settings.py`    | ❌           | ✅                |
+| Consegue acessar models           | ❌           | ✅                |
+| Consegue consultar banco de dados | ❌           | ✅                |
+| Lê o `.env` (se Django carregar)  | ❌           | ✅                |
+| Útil para debugar                 | Razoável      | Excelente         |
+
+```bash
+python manage.py shell
+
+6 objects imported automatically (use -v 2 for details).
+Python 3.12.3 (main, Aug 14 2025, 17:47:21) [GCC 13.3.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+(InteractiveConsole)
+
+>>> import os
+
+>>> print(os.getenv("POSTGRES_HOST"))
+db
+
+>>> print(os.getenv("POSTGRES_PASSWORD"))
+ragpass
+```
+
+> **NOTE:**  
+> Vejam que realmente nós estamos conseguindo acessar as variáveis de ambiente.
+
+Continuando, agora vamos dizer ao Django qual Banco de Dados vamos utilizar.
+
+Por exemplo:
+
+[core/settings.py](../core/settings.py)
+```python
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("POSTGRES_DB"),
+        "USER": os.getenv("POSTGRES_USER"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
+        "HOST": os.getenv("POSTGRES_HOST", "localhost"),
+        "PORT": os.getenv("POSTGRES_PORT", 5432),
+    }
+}
+```
+
+No exemplo acima nós temos um dicionário que informa ao Django como conectar ao banco de dados:
+
+ - `ENGINE`
+   - Qual backend/driver o Django usa — aqui, PostgreSQL.
+ - `NAME`
+   - Nome do banco.
+ - `USER`
+   - Usuário do banco.
+ - `PASSWORD`
+   - Senha do usuário.
+ - `HOST`
+   - Host/hostname do servidor de banco.
+ - `PORT`
+   - Porta TCP onde o Postgres escuta.
+
+#### `O que os.getenv('VAR', 'default') faz, exatamente?`
+
+`os.getenv` vem do módulo padrão `os` e faz o seguinte:
+
+ - Tenta ler a variável de ambiente chamada 'VAR' (por exemplo POSTGRES_DB);
+ - Se existir, retorna o valor da variável de ambiente;
+ - Se não existir, retorna o valor padrão passado como segundo argumento ('default').
+
+#### `Por que às vezes PASSAMOS um valor padrão (default) no código?`
+
+ - *Conforto no desenvolvimento local:* evita quebrar o projeto se você esquecer de definir `.env`.
+ - *Documentação inline:* dá uma ideia do nome esperado (easy_rag, 5432, etc.).
+ - *Teste rápido:* você pode rodar `manage.py` localmente sem carregar variáveis.
+
+> **NOTE:**  
+> Mas atenção: os valores padrões não devem conter segredos reais (ex.: supersecret) no repositório público — isso é um risco de segurança.
+
+#### `Por que você não deveria colocar senhas no código?`
+
+ - Repositórios (Git) podem vazar ou ser lidos por terceiros.
+ - Código pode acabar em backups, imagens Docker, etc.
+ - Difícil rotacionar/chavear senhas se espalhadas pelo repositório.
+
+> **Regra prática:**  
+> - *"NUNCA"* colocar credenciais reais em `settings.py`.
+> - Use `.env` (não comitado) ou um *"secret manager"*.
 
 ---
 
