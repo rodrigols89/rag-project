@@ -16,6 +16,9 @@
  - [`Criando o docker compose para o container web`](#web-docker-compose)
  - [`Configurando o Django para reconhecer o PostgreSQL (+ .env) como Banco de Dados`](#django-postgresql-settings)
  - [`Criando o container Nginx (nginx | +Reverse Proxy)`](#nginx-container)
+ - [`Instalando e configurando o Ruff`](#ruff-settings-pyproject)
+ - [`Instalando e configurando o Pytest`](#pytest-settings-pyproject)
+ - [`Instalando e configurando o pre-commit`](#precommit-settings)
 <!---
 [WHITESPACE RULES]
 - "40" Whitespace character.
@@ -2351,6 +2354,636 @@ Accept-Ranges: bytes
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+<div id="ruff-settings-pyproject"></div>
+
+## `Instalando e configurando o Ruff`
+
+ - Antes de cair de cobeça na codificação do nosso projeto é interessante criar um mecanismo de verificação de qualidade de código.
+ - Para isso vamos utilizar a ferramenta [Ruff](https://github.com/astral-sh/ruff)
+
+De início, vamos instalar e configurar o **Ruff** no nosso `pyproject.toml`:
+
+```bash
+poetry add --group dev ruff@latest
+```
+
+Agora, vamos atualizar essa bibliota nos nossos [requirments.txt](../requirements.txt) e [requirments-dev.txt](../requirements-dev.txt):
+
+```bash
+task exportdev
+```
+
+```bash
+task exportprod
+```
+
+#### `[tool.ruff]`
+
+> Esse bloco define às *Regras Gerais de funcionamento do (Ruff)*.
+
+[pyproject.toml](../pyproject.toml)
+```toml
+[tool.ruff]
+line-length = 79
+exclude = [
+    "core/settings.py",
+]
+```
+
+ - `line-length = 79`
+   - Define que nenhuma linha de código deve ultrapassar 79 caracteres *(seguindo o padrão tradicional do PEP 8)*.
+   - É especialmente útil para manter legibilidade em terminais com largura limitada.
+   - Ruff irá avisar (e, se possível, corrigir) quando encontrar linhas mais longas.
+ - `exclude = ["core/settings.py"]`
+   - Define quais arquivos o Ruff deve ignorar:
+     - Nesse caso, ele vai ignorar o arquivo `core/settings.py`.
+
+#### `[tool.ruff.lint]`
+
+Esse é o sub-bloco principal de configuração de linting do Ruff, ou seja, onde você define como o Ruff deve analisar o código quanto a erros, estilo, boas práticas etc.
+
+[pyproject.toml](../pyproject.toml)
+```toml
+[tool.ruff.lint]
+preview = true
+select = ['I', 'F', 'E', 'W', 'PL', 'PT']
+```
+
+ - `preview = true`
+   - Ativa regras experimentais (em fase de teste, mas estáveis o suficiente).
+   - Pode incluir novas verificações que ainda não fazem parte do conjunto padrão.
+   - Útil se você quer estar sempre com o Ruff mais “rigoroso” e atualizado.
+ - `select = ['I', 'F', 'E', 'W', 'PL', 'PT']`
+   - Define quais conjuntos de regras (lints) o Ruff deve aplicar ao seu código. Cada uma dessas letras corresponde a um grupo de regras:
+     - `I` ([Isort](https://pycqa.github.io/isort/)): Ordenação de imports em ordem alfabética.
+     - `F` ([Pyflakes](https://github.com/PyCQA/pyflakes)): Procura por alguns erros em relação a boas práticas de código.
+     - `E` ([pycodestyle](https://pycodestyle.pycqa.org/en/latest/)): Erros de estilo de código.
+     - `W` ([pycodestyle](https://pycodestyle.pycqa.org/en/latest/)): Avisos sobre estilo de código.
+     - `PL` ([Pylint](https://pylint.pycqa.org/en/latest/index.html)): "erros" em relação a boas práticas de código.
+     - `PT` ([flake8-pytest](https://pypi.org/project/flake8-pytest-style/)): Boas práticas do Pytest.
+
+#### `[tool.ruff.format]`
+
+O bloco [tool.ruff.format] é usado para configurar o formatador interno do Ruff, que foi introduzido recentemente como uma alternativa ao Black — mas com a vantagem de ser muito mais rápido.
+
+```toml
+[tool.ruff.format]
+preview = true
+quote-style = "double"
+```
+
+ - `preview = true`
+   - Ativa regras experimentais (em fase de teste, mas estáveis o suficiente).
+ - `quote-style = "double"`
+   - Define o estilo de aspas (duplas no nosso caso) usadas pelo formatador.
+
+Por fim, vamos adicionar o comando Taskipy responsável por executar o Ruff:
+
+[pyproject.toml](../pyproject.toml)
+```toml
+[tool.taskipy.tasks]
+# ------------------------ ( Linting ) ----------------------
+pre_lint = 'ruff check --fix'
+lint = 'ruff check'
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+<div id="pytest-settings-pyproject"></div>
+
+## `Instalando e configurando o Pytest`
+
+ - Nós também vamos precisar de um mecanismo para verificação de qualidade de código referente a testes.
+ - Para isso vamos utilizar a biblioteca [Pytest](https://github.com/pytest-dev/pytest).
+
+De início, vamos *instalar* e *configurar* o **Pytest** no nosso `pyproject.toml`.
+
+```bash
+poetry add --group dev pytest@latest
+```
+
+```bash
+poetry add --group dev pytest-cov@latest
+```
+
+```bash
+poetry add --group dev pytest-django@latest
+```
+
+Agora, vamos atualizar essa bibliota nos nossos [requirments.txt](../requirements.txt) e [requirments-dev.txt](../requirements-dev.txt):
+
+```bash
+task exportdev
+```
+
+```bash
+task exportprod
+```
+
+Agora, vamos criar uma seção no nosso [pyproject.toml](../pyproject.toml) que é equivalente a ter um arquivo `pytest.ini` separado:
+
+[pyproject.toml](../pyproject.toml)
+```toml
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "core.settings"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+```
+
+ - `DJANGO_SETTINGS_MODULE = "core.settings"`
+   - Define qual arquivo de configuração do Django o pytest deve usar durante os testes
+   - É o equivalente a fazer `export DJANGO_SETTINGS_MODULE=core.settings` no terminal
+   - **Por que é necessário?**
+     - O Django precisa saber qual settings.py usar para configurar o banco de dados, apps instalados, middlewares, etc.
+     - Sem isso, você receberia erros tipo: "Django is not configured"
+ - `python_files = ["tests.py", "test_*.py", "*_tests.py"]`
+   - Define quais arquivos o pytest deve considerar como arquivos de teste
+   - Aceita 3 padrões de nomenclatura:
+     - `tests.py` - arquivo único chamado exatamente "tests.py"
+     - `test_*.py` - qualquer arquivo começando com "test_" (ex: test_models.py, test_views.py)
+     - `*_tests.py` - qualquer arquivo terminando com "_tests" (ex: models_tests.py, views_tests.py)
+
+**EXEMPLO NA PRÁTICA:**
+```bash
+myapp/
+├── tests.py          ✅ Será executado
+├── test_models.py    ✅ Será executado
+├── test_views.py     ✅ Será executado
+├── models_tests.py   ✅ Será executado
+├── views.py          ❌ NÃO será executado (não segue os padrões)
+└── my_test.py        ❌ NÃO será executado (não segue os padrões)
+```
+
+Continuando, agora vamos ativar a descoberta automática de projetos Django pelo [pytest-django](https://github.com/pytest-dev/pytest-django):
+
+[pyproject.toml](../pyproject.toml)
+```toml
+[tool.pytest.ini_options]
+django_find_project = true
+```
+
+ - `django_find_project = true`
+   - Diz ao [pytest-django](https://github.com/pytest-dev/pytest-django) para procurar automaticamente a raiz do projeto Django
+   - Ele sobe na hierarquia de diretórios até encontrar o [manage.py](../manage.py)
+
+**Sem django_find_project = true:**
+```bash
+# Você precisa estar EXATAMENTE na raiz do projeto
+cd /projeto/
+pytest  # ✅ Funciona
+
+cd /projeto/myapp/
+pytest  # ❌ Erro: Django is not configured
+```
+
+**Com django_find_project = true:**
+```bash
+# Funciona de QUALQUER subdiretório
+cd /projeto/myapp/tests/
+pytest  # ✅ Funciona! Encontra o manage.py automaticamente
+
+cd /projeto/myapp/
+pytest  # ✅ Funciona!
+
+cd /projeto/
+pytest  # ✅ Funciona!
+```
+
+Agora, vamos adicionar algumas configurações na seção que mede a cobertura de testes: `[tool.coverage.run]`
+
+[pyproject.toml](../pyproject.toml)
+```toml
+[tool.coverage.run]
+omit = [
+    "*/__init__.py",
+    "*/migrations/*",
+]
+```
+
+> **NOTE:**  
+> Na verdade, o que estamos dizendo é que não vamos medir a cobertura de arquivos `__init__.py` ou `migrations/`
+
+Por fim, vamos adicionar o comando Taskipy responsável por executar o Pytest:
+
+[pyproject.toml](../pyproject.toml)
+```toml
+[tool.taskipy.tasks]
+# ------------------------ ( Testing ) ----------------------
+test = "docker compose exec -T web pytest -s -x --cov=. -vv"
+post_test = 'docker compose exec -T web coverage html'
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+<div id="precommit-settings"></div>
+
+## `Instalando e configurando o pre-commit`
+
+Para garantir que antes de cada commit seu projeto passe por:
+
+ - ✅ lint (usando Ruff)
+ - ✅ test (com pytest)
+ - ✅ coverage
+
+Você deve usar o pre-commit — uma ferramenta leve e ideal para isso. Vamos configurar passo a passo:
+
+```bash
+poetry add --group dev pre-commit
+```
+
+Novamente, vamos atualizar essa bibliota nos nossos [requirments.txt](../requirements.txt) e [requirments-dev.txt](../requirements-dev.txt):
+
+```bash
+task exportdev
+```
+
+```bash
+task exportprod
+```
+
+Agora, vamos inciar o arquivo [.pre-commit-config.yaml](../.pre-commit-config.yaml) com a seguinte configuração:
+
+[.pre-commit-config.yaml](../.pre-commit-config.yaml)
+```yaml
+repos:
+  - repo: local
+    hooks:
+```
+
+### `repos:`
+
+ - A lista de repositórios de onde os hooks do pre-commit virão
+ - Um arquivo .pre-commit-config.yaml pode ter vários repositórios configurados
+
+**EXEMPLO:**
+```yaml
+repos:
+  - repo: https://github.com/psf/black
+    # hooks do black aqui
+  
+  - repo: https://github.com/pycqa/flake8
+    # hooks do flake8 aqui
+  
+  - repo: local
+    # hooks locais aqui
+```
+
+### `repo: local`
+
+ - Define um repositório do tipo "local"
+ - Os hooks NÃO vêm de um repositório externo do GitHub
+ - Os hooks são definidos no próprio projeto
+
+**Repositório Externo (padrão):**
+```yaml
+- repo: https://github.com/psf/black
+  rev: 23.12.1  # Versão específica
+  hooks:
+    - id: black
+```
+
+ - ✅ Hooks prontos da comunidade
+ - ✅ Versionados e testados
+ - ❌ Menos flexibilidade
+
+**Repositório Local (local):**
+```yaml
+- repo: local
+  hooks:
+    - id: meu-hook-customizado
+      name: Meu Hook
+      entry: ./meu-script.sh
+      language: system
+```
+
+ - ✅ Total controle e customização
+ - ✅ Usa ferramentas já instaladas no projeto
+ - ✅ Pode rodar comandos específicos do seu workflow
+ - ❌ Você mantém o código
+
+### `hooks:`
+
+ - Lista de hooks (ganchos) que serão executados
+ - Cada hook é uma verificação ou ação que roda antes do commit
+
+**Estrutura de um hook:**
+```yaml
+hooks:
+  - id: nome-unico-do-hook
+    name: Nome legível para humanos
+    entry: comando a ser executado
+    language: system
+    types: [python]
+    pass_filenames: false
+```
+
+### `Hook do Ruff no Pre-commit`
+
+[.pre-commit-config.yaml](../.pre-commit-config.yaml)
+```yaml
+repos:
+  - repo: local
+    hooks:
+
+      # ---------------------------------------------
+      #  LINT (somente quando arquivos Python mudarem)
+      # ---------------------------------------------
+      - id: ruff-lint
+        name: ruff check
+        entry: task lint
+        language: system
+        types: [python]
+        pass_filenames: false
+        exclude: >
+          ^(
+            .*/migrations/.*|
+          )
+```
+
+> **O que este hook faz?**
+
+Toda vez que você tentar fazer um `git commit`, ANTES do commit ser criado, este hook:
+
+ - Roda o comando `task lint` (que executa o Ruff)
+ - Verifica se há problemas de estilo/qualidade no código Python
+ - Bloqueia o commit se encontrar erros
+ - Permite o commit se tudo estiver OK
+
+ - `id: ruff-lint`
+   - Identificador único do hook dentro do arquivo de configuração
+   - Usado para referenciar este hook especificamente
+   - Você pode rodar só este hook com: `pre-commit run ruff-lint`
+   - **NOTE:** Deve ser único dentro do arquivo
+ - `name: ruff check`
+   - Nome legível que aparece no terminal quando o hook executa
+   - É o que você vê na saída: `ruff check........Passed`
+   - Pode ser qualquer texto descritivo
+   - Não precisa ser igual ao id
+ - `entry: task lint`
+   - Comando que será executado quando o hook rodar
+   - No seu caso, chama `task lint` (definido no [pyproject.toml](../pyproject.toml))
+   - task lint provavelmente executa ruff check ou similar
+ - `language: system`
+   - **Qual "ambiente" usar para executar o comando:**
+     - system = usar o ambiente do sistema operacional atual
+     - Não cria ambiente virtual isolado
+     - Usa o Python/ferramentas já instaladas na sua máquina
+   - **Outras opções:**
+     - python = cria venv isolado e instala dependências
+     - node = usa Node.js
+     - docker = roda em container
+     - script = executa script shell
+   - **Por que system no nosso caso:**
+     - Nós já temos task e ruff instalados
+     - Mais rápido (não cria ambientes isolados)
+     - Usa a versão do Ruff do nosso projeto
+ - `types: [python]`
+   - Filtro de tipos de arquivos que ativam este hook
+   - Só executa se arquivos Python forem modificados
+   - Ignora commits que só alteram `.md`, `.txt`, `.json`, `etc`.
+   - **Poderia ser mais de um tipo? SIM!**
+     - `types: [python, yaml, toml]`
+     - **NOTE:** Nesse caso, o hook será acionado se qualquer arquivo *Python*, *YAML* ou *TOML* for modificado.
+ - `pass_filenames: false`
+   - Com `pass_filenames: false`, vocé NÃO passar os nomes dos arquivos modificados para o comando.
+   - **Com pass_filenames: true (padrão):**
+     - `# Pre-commit passaria os arquivos modificados:`
+     - `task lint myapp/views.py myapp/models.py`
+   - **Com pass_filenames: false:**
+     - `# Pre-commit roda sem argumentos:`
+     - `task lint`
+     - `# E o Ruff verifica TODO o projeto, não só arquivos modificados`
+   - **Por que usar false?**
+     - ✅ Garante consistência em TODO o código
+     - ✅ Ruff é rápido o suficiente para verificar tudo
+     - ✅ Evita que erros antigos passem despercebidos
+     - ❌ Pode ser mais lento em projetos grandes
+ - `exclude:`
+   - Arquivos ou pastas que devem ser ignorados pelo hook
+
+> **NOTE:**  
+> Não vou mais explicar os demais hooks linh a linha porque a partir deste já dá para entender a maioria dos comandos.
+
+### `.pre-commit-config.yaml completo`
+
+[.pre-commit-config.yaml](../.pre-commit-config.yaml)
+```yaml
+repos:
+  - repo: local
+    hooks:
+
+      # ---------------------------------------------
+      #  LINT (somente quando arquivos Python mudarem)
+      # ---------------------------------------------
+      - id: ruff-lint
+        name: ruff check
+        entry: task lint
+        language: system
+        types: [python]
+        pass_filenames: false
+        exclude: >
+          ^(
+            .*/migrations/.*|
+          )
+
+      # --------------------------------------------------------
+      #  PYTEST (executado dentro do container web)
+      #  • Só roda se arquivos Python mudarem
+      #  • Usa -T para evitar erro "not a TTY"
+      # --------------------------------------------------------
+      - id: pytest-test
+        name: run pytest inside docker
+        entry: docker compose run -T --rm web pytest -s -x --cov=. -vv
+        language: system
+        types: [python]
+        pass_filenames: false
+        exclude: >
+          ^(
+            .*/migrations/.*|
+          )
+
+      # --------------------------------------------------------
+      #  COVERAGE MINIMUM (falha se < 70%)
+      # --------------------------------------------------------
+      - id: pytest-coverage
+        name: coverage threshold
+        entry: docker compose run -T --rm web pytest --cov=. --cov-fail-under=70
+        language: system
+        types: [python]
+        pass_filenames: false
+        exclude: >
+          ^(
+            .*/migrations/.*|
+          )
+```
+
+Agora nós precisamos instalar o pre-commit para esses hooks funcionarem corretamente:
+
+```bash
+pre-commit install
+```
+
+#### Dica extra: Se quiser rodar manualmente
+
+```bash
+pre-commit run --all-files
+```
+
+Por fim, vamos adicionar o comando Taskipy responsável por executar o pre-commit:
+
+[pyproject.toml](../pyproject.toml)
+```toml
+[tool.taskipy.tasks]
+# ---------------------- ( Pre-Commit ) ---------------------
+precommit = 'pre-commit run --all-files'
+```
 
 ---
 
