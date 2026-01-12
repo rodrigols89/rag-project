@@ -3174,14 +3174,14 @@ Por fim, vamos adicionar os badges do **Codecov** e do **Pipeline**:
 
 De início, vamos começar dando um nome a esse workflow:
 
-[lint.yml](.github/workflows/lint.yml)
+[lint.yml](../.github/workflows/lint.yml)
 ```yaml
 name: Lint
 ```
 
 Agora, nós vamos adicionar os gatilhos (triggers) que acionarão esse workflow:
 
-[lint.yml](.github/workflows/lint.yml)
+[lint.yml](../.github/workflows/lint.yml)
 ```yaml
 on:
   push:
@@ -3221,7 +3221,7 @@ on:
 
 Continundo, agora nós vamos criar uma seção para `jobs`:
 
-[lint.yml](.github/workflows/lint.yml)
+[lint.yml](../.github/workflows/lint.yml)
 ```yaml
 jobs:
   ...
@@ -3233,7 +3233,7 @@ jobs:
 
 Agora nós vamos criar uma tarefa (job) com o nome `lint-ci` que vai ser executada no SO `ubuntu-latest`:
 
-[lint.yml](.github/workflows/lint.yml)
+[lint.yml](../.github/workflows/lint.yml)
 ```yaml
 jobs:
   lint-ci:
@@ -3247,7 +3247,7 @@ jobs:
 
 Agora, dentro dessa `tarefa (lint-ci)`, na máquina `ubuntu-latest`, nós vamos ter alguns `passos (steps)` que serão executados:
 
-[lint.yml](.github/workflows/lint.yml)
+[lint.yml](../.github/workflows/lint.yml)
 ```yaml
 jobs:
   lint-ci:
@@ -3295,7 +3295,7 @@ jobs:
 
 ### `Workflow completo`
 
-[lint.yml](.github/workflows/lint.yml)
+[lint.yml](../.github/workflows/lint.yml)
 ```yaml
 name: Lint
 
