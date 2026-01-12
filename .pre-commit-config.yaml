@@ -1,0 +1,47 @@
+repos:
+  - repo: local
+    hooks:
+
+      # ---------------------------------------------
+      #  LINT (somente quando arquivos Python mudarem)
+      # ---------------------------------------------
+      - id: ruff-lint
+        name: ruff check
+        entry: task lint
+        language: system
+        types: [python]
+        pass_filenames: false
+        exclude: >
+          ^(
+            .*/migrations/.*|
+          )
+
+      # --------------------------------------------------------
+      #  PYTEST (executado dentro do container web)
+      #  • Só roda se arquivos Python mudarem
+      #  • Usa -T para evitar erro "not a TTY"
+      # --------------------------------------------------------
+      - id: pytest-test
+        name: run pytest inside docker
+        entry: docker compose run -T --rm web pytest -s -x --cov=. -vv
+        language: system
+        types: [python]
+        pass_filenames: false
+        exclude: >
+          ^(
+            .*/migrations/.*|
+          )
+
+      # --------------------------------------------------------
+      #  COVERAGE MINIMUM (falha se < 70%)
+      # --------------------------------------------------------
+      - id: pytest-coverage
+        name: coverage threshold
+        entry: docker compose run -T --rm web pytest --cov=. --cov-fail-under=70
+        language: system
+        types: [python]
+        pass_filenames: false
+        exclude: >
+          ^(
+            .*/migrations/.*|
+          )
