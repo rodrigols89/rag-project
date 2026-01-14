@@ -1,3 +1,8 @@
+[![CI](https://github.com/rodrigols89/rag-project/actions/workflows/lint.yml/badge.svg)](https://github.com/rodrigols89/rag-project/actions/workflows/lint.yml)
+[![CI](https://github.com/rodrigols89/rag-project/actions/workflows/test.yml/badge.svg)](https://github.com/rodrigols89/rag-project/actions/workflows/test.yml)
+[![CI](https://github.com/rodrigols89/rag-project/actions/workflows/docker.yml/badge.svg)](https://github.com/rodrigols89/rag-project/actions/workflows/docker.yml)
+[![codecov](https://codecov.io/github/rodrigols89/rag-project/graph/badge.svg?token=8OX6I7IKQB)](https://codecov.io/github/rodrigols89/rag-project)
+
 # RAG Project
 
  - [**Introdução e Objetivos do Projeto**](#intro-to-the-project)
