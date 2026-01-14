@@ -1,0 +1,73 @@
+name: Docker
+
+on:
+  push:
+    branches: [ ci-cd ]
+  pull_request:
+    branches: [ ci-cd ]
+
+jobs:
+  docker-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Checkout do repositório
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2) Criar um .env temporário para o CI
+      - name: Create .env for CI
+        run: |
+          cat <<EOF > .env
+          POSTGRES_DB=easy_rag_db
+          POSTGRES_USER=easyrag
+          POSTGRES_PASSWORD=easyragpass
+          POSTGRES_HOST=db
+          POSTGRES_PORT=5432
+
+          REDIS_HOST=redis
+          REDIS_PORT=6379
+
+          DJANGO_SECRET_KEY=testkey
+          DJANGO_DEBUG=False
+          DJANGO_ALLOWED_HOSTS=*
+          
+          UVICORN_HOST=0.0.0.0
+          UVICORN_PORT=8000
+          EOF
+
+      # 3) Validar Dockerfile
+      - name: Validate Dockerfile
+        run: docker build -t test-app -f Dockerfile .
+
+      # 4) Validar docker-compose
+      - name: Validate docker-compose
+        run: docker compose config
+
+      # 5) Subir ambiente inteiro
+      - name: Start stack
+        run: docker compose up -d --build
+
+      # 6) Aguardar o servidor subir
+      - name: Wait for server
+        run: |
+          for i in {1..30}; do
+            STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://localhost)
+            if [ "$STATUS" -eq 200 ]; then
+              echo "Server is up!"
+              exit 0
+            fi
+            echo "Waiting for server (try $i)..."
+            sleep 5
+          done
+          echo "Server did not start in time."
+          exit 1
+
+      # 7) Ver logs (aparece só se falhar)
+      - name: Logs
+        if: always()
+        run: docker compose logs --no-color
+
+      # 8) Derrubar stack
+      - name: Shutdown stack
+        run: docker compose down -v
