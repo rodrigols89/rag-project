@@ -32,8 +32,8 @@ jobs:
           DJANGO_DEBUG=False
           DJANGO_ALLOWED_HOSTS=*
           
-          UVICORN_HOST=0.0.0.0
-          UVICORN_PORT=8000
+          DJANGO_HOST=0.0.0.0
+          DJANGO_PORT=8000
           EOF
 
       # 3) Validar Dockerfile
@@ -51,13 +51,15 @@ jobs:
       # 6) Aguardar o servidor subir
       - name: Wait for server
         run: |
+          echo "Waiting for server to be ready..."
+          sleep 10
           for i in {1..30}; do
-            STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://localhost)
-            if [ "$STATUS" -eq 200 ]; then
+            STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://localhost 2>/dev/null || echo "000")
+            if [ "$STATUS" = "200" ]; then
               echo "Server is up!"
               exit 0
             fi
-            echo "Waiting for server (try $i)..."
+            echo "Waiting for server (try $i/30)... Status: $STATUS"
             sleep 5
           done
           echo "Server did not start in time."
