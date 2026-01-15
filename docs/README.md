@@ -3796,7 +3796,7 @@ urlpatterns = [
 
 ## `Criando testes para o manage.py`
 
-> Aqui nós vamos criar alguns testes simples (só para o nosso Pytest passar no pre-commit) para o [manage.py](../manage.py).
+> Aqui nós vamos criar alguns testes simples (só para o nosso Pytest passar no pre-commit) para o nosso arquivo [manage.py](../manage.py).
 
 ### `test_main_sets_django_settings_module_when_not_set()`
 
@@ -3810,15 +3810,15 @@ import manage
 main = manage.main
 ```
 
-Agora vamos implementar uma função de teste chamada `test_main_sets_django_settings_module_when_not_set` que vai ser responsável por:
+Agora vamos criar uma **função de teste** chamada `test_main_sets_django_settings_module_when_not_set` que vai ser responsável por:
 
  - Verificar se a função `main()` do [manage.py](../manage.py) configura corretamente a variável de ambiente `DJANGO_SETTINGS_MODULE` quando ela ainda não existe;
  - E se o Django é executado com os argumentos certos.
 
 > **Em outras palavras:**  
-> 👉 Queremos ter certeza de que o manage.py funciona mesmo quando o ambiente ainda não está configurado.
+> 👉 Queremos ter certeza de que o `manage.py` funciona mesmo quando o ambiente ainda não está configurado.
 
-Vamos começar criando uma função que começa com `test_` e que recebe `monkeypatch` como argumento:
+Continuando, agora vamos começar criando uma função que começa com `test_` e que recebe `monkeypatch` como argumento:
 
 [test_manage.py](../tests/test_manage.py)
 ```python
@@ -4076,7 +4076,7 @@ def test_admin_url_is_registered():
 
 ### `🅰️ Arrange — Preparando o cenário`
 
-Continuando, nesta etapa (Arrange), nós não vamos precisar preparar quase nada, porque:
+Continuando, nesta etapa, nós não vamos precisar **preparar (arrange)** quase nada, porque:
 
  - o Django já carrega automaticamente o `ROOT_URLCONF`
  - o arquivo `core/urls.py` já está configurado no projeto
@@ -4088,14 +4088,9 @@ Mesmo assim, precisamos importar a função que será usada para testar URLs:
 from django.urls import resolve
 ```
 
- - A função `resolve()`:
-   - recebe uma URL como string
-   - tenta encontrar essa URL no `urlpatterns = [...]`
-   - retorna informações sobre a rota encontrada
-
 ### `🅰️🅰️ Act — Executando a ação`
 
-Agora vamos executar a ação (Act) principal do teste que vai ser **pedir para o Django resolver a URL `/admin/`**:
+Agora vamos executar a **ação (act)** principal do teste que vai ser **pedir para o Django resolver a URL `/admin/`**:
 
 [tests/test_urls.py](../tests/test_urls.py)
 ```python
@@ -4160,9 +4155,9 @@ def test_admin_url_is_registered():
 ```
 
  - **O que esse assert garante?**
-   - Que o Django conseguiu resolver a URL /admin/
+   - Que o Django conseguiu resolver a URL `/admin/`
    - Que essa rota está registrada
-   - Que o arquivo core/urls.py está funcionando corretamente
+   - Que o arquivo `core/urls.py` está funcionando corretamente
    - 👉 Se a URL for removida, alterada ou quebrada, esse teste falha.
 
 ### `Testando`
@@ -4231,15 +4226,7 @@ pytest -s -x --cov=. -vv tests/test_urls.py::test_admin_url_is_registered
 
 ## `Testando se a aplicação ASGI do Django é criada corretamente`
 
-Aqui, nós vamos criar um teste automatizado simples para garantir que o arquivo `core/asgi.py` está configurado corretamente e que o Django consegue criar a aplicação ASGI do projeto.
-
-> **👉 Em termos simples:**  
-> “Esse teste garante que o Django conseguiu inicializar a aplicação ASGI sem erros.”
-
-Esse teste é importante porque:
-
- - o ASGI é usado por servidores como Daphne, Uvicorn e Hypercorn
- - qualquer erro nesse arquivo impede o projeto de subir em produção
+> Aqui, nós vamos criar um teste automatizado simples para garantir que o arquivo `core/asgi.py` está configurado corretamente e que o Django consegue criar a aplicação ASGI do projeto.
 
 Vamos começar criando uma **função de teste** chamada `test_asgi_application_is_created()`:
 
@@ -4253,21 +4240,24 @@ def test_asgi_application_is_created():
 
 ### `🅰️ Arrange — Preparando o cenário`
 
-Nesta etapa, nós não precisamos preparar quase nada manualmente.
+Nesta etapa, nós não precisamos **preparar (arrange)** quase nada manualmente.
 
 Isso porque:
 
  - o Django já carrega automaticamente as configurações
  - o arquivo `core/asgi.py` já define:
 
+O que nós vamos precisar fazer aqui é importar o objeto (application) que está em `core.asgi`
+
+[core/asgi.py](../core/asgi.py)
 ```python
-os.environ.setdefault(
-    'DJANGO_SETTINGS_MODULE',
-    'core.settings',
-)
+application = get_asgi_application()
 ```
 
-O que precisamos fazer aqui é importar o objeto que será testado.
+> **NOTE:**  
+> Vejam que o objeto `application` recebe o retorno da função `get_asgi_application()` que retorna uma aplicação ASGI do Django.
+
+Ou seja, no nosso **arrange** nós só precisamos importar o objeto `application` no nosso teste:
 
 [tests/test_asgi.py](../tests/test_asgi.py)
 ```python
@@ -4280,17 +4270,9 @@ def test_asgi_application_is_created():
     """
 ```
 
-> **🔍 O que acontece nesse import?**
-
- - O Python executa o arquivo core/asgi.py
- - O Django:
-   - garante que `DJANGO_SETTINGS_MODULE` está definido
- - chama `get_asgi_application()` (que está em `core/asgi.py`)
- - O objeto `application` é criado
-
 ### `🅰️🅰️ Act — Executando a ação`
 
-Aqui a ação é mínima, mas ainda existe:
+Agora a **ação (act)** é mínima, mas ainda existe:
 
 > 👉 Nós simplesmente acessamos o objeto application.
 
@@ -4318,7 +4300,7 @@ Isso confirma que:
 
 ### `🅰️🅰️🅰️ Assert — Verificando o resultado`
 
-Agora vamos criar um único `assert`, focando em uma coisa só:
+Por fim, vamos criar um `assert` único, focando em uma coisa só:
 
 [tests/test_asgi.py](../tests/test_asgi.py)
 ```python
@@ -4340,7 +4322,23 @@ def test_asgi_application_is_created():
     assert callable(app)
 ```
 
-> **O que esse assert garante?**
+ - **O que callable() faz?**
+   - A função `callable()` responde a seguinte pergunta:
+     - 👉 “Esse objeto pode ser chamado como uma função?”
+   - Em outras palavras, ela verifica se o objeto:
+     - pode ser usado com parênteses ()
+     - se comporta como uma função, método ou objeto chamável
+ - **Quais parâmetros callable() recebe?**
+   - Qualquer objeto Python
+   - 👉 Não existem parâmetros opcionais.
+   - 👉 Sempre é exatamente um argumento.
+ - **O que callable() retorna?**
+   - Tipo de retorno: `bool`
+   - Valores possíveis:
+     - `True` o objeto pode ser chamado
+     - `False` o objeto nao pode ser chamado
+
+> **Mas, o que esse assert garante?**
 
  - **Que application:**
    - existe
@@ -4440,7 +4438,7 @@ def test_users_app_is_installed():
 
 ### `🅰️ Arrange — Preparando o cenário`
 
-Nesta etapa, precisamos apenas acessar o registro de apps do Django.
+Nesta etapa, precisamos apenas **acessar (arrange)** o registro de apps do Django.
 
 [tests/test_apps.py](../tests/test_apps.py)
 ```python
@@ -4456,14 +4454,14 @@ def test_users_app_is_installed():
  - Esse objeto (apps) já está disponível assim que o Django inicia.
  - Ele sabe exatamente quais apps estão instalados e carregados.
  - *📌 Não precisamos mockar nada aqui, porque:*
-   - o Django já foi inicializado pelo pytest-django
+   - o Django já foi inicializado pelo `pytest-django`
    - o `settings.py` já foi carregado
 
 ### `🅰️🅰️ Act — Executando a ação`
 
-Agora vamos executar a ação principal do teste:
+Agora vamos executar a **ação (act)** principal do teste:
 
-> 👉 perguntar ao Django se o app users está instalado.
+> 👉 perguntar ao Django se o app `users` está instalado.
 
 [tests/test_apps.py](../tests/test_apps.py)
 ```python
@@ -4482,16 +4480,37 @@ def test_users_app_is_installed():
     app_config = apps.get_app_config("users")
 ```
 
- - **O que acontece aqui?**
-   - O Django procura um app com o label `"users"`
-   - Se o app não existir, o Django lança uma exceção
-   - Se o app existir, ele retorna um objeto de configuração do app
- - **Ou seja:**
-   - se chegarmos até a próxima linha do teste, o app existe 👍
+ - **O que a .get_app_config() faz?**
+   - Em termos simples:
+     - O Django mantém um registro interno de todos os apps instalados
+     - `.get_app_config()` consulta esse registro
+   - Ou seja, ela responde à pergunta:
+     - “O app users está realmente instalado e carregado no projeto?”
+     - E devolve o objeto que representa o app solicitado
+ - **Quais parâmetros ela recebe?**
+   - Nome curto (label) do app
+   - No nosso caso: `"users"`
+ - **O que ela retorna?**
+   - Tipo de retorno: `django.apps.config.AppConfig`
+   - **O objeto retornado representa:**
+     - o app instalado
+     - suas configurações
+     - seus metadados
+   - **Exemplos de atributos úteis:**
+     - `app_config.name`
+     - `app_config.label`
+     - `app_config.verbose_name`
+     - `app_config.path`
+   - **O que acontece se o app NÃO estiver instalado?**
+     - Se o app não estiver em INSTALLED_APPS, o Django levanta uma exceção:
+       - `django.core.exceptions.LookupError`
+     - **👉 Isso é ótimo para testes, porque:**
+       - se o app não existir → o teste falha automaticamente
+       - você não precisa escrever lógica extra
 
 ### `🅰️🅰️🅰️ Assert — Verificando o resultado`
 
-Agora vamos criar um **único assert**, focando em uma coisa só:
+Agora vamos criar um **assert** único, focando em uma coisa só:
 
 > 👉 garantir que o app foi encontrado.
 
@@ -4531,7 +4550,6 @@ Se você desejar rodar esse teste específico você pode executar o seguinte com
 ```bash
 pytest -s -x --cov=. -vv tests/test_apps.py::test_users_app_is_installed
 ```
-
 
 ---
 
