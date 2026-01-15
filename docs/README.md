@@ -22,7 +22,8 @@
  - [`Criando testes para o manage.py`](#manage-py-tests)
  - [`Criando o diretório (pasta) .github/workflows/`](#github-workflows)
  - [`Criando o workflow lint.yml`](#github-workflows-lint-yml)
- - [`test_admin_url_is_registered()`](#test-admin-url-is-registered)
+ - [`Testando se a URL /admin/ está registrada corretamente`](#test-admin-url-is-registered)
+ - [`Testando se a aplicação ASGI do Django é criada corretamente`](#test-asgi-application-is-created)
 <!---
 [WHITESPACE RULES]
 - "40" Whitespace character.
@@ -3796,6 +3797,217 @@ Se você desejar rodar esse teste específico você pode executar o seguinte com
 
 ```bash
 pytest -s -x --cov=. -vv tests/test_urls.py::test_admin_url_is_registered
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+<div id="test-asgi-application-is-created"></div>
+
+## `Testando se a aplicação ASGI do Django é criada corretamente`
+
+Aqui, nós vamos criar um teste automatizado simples para garantir que o arquivo `core/asgi.py` está configurado corretamente e que o Django consegue criar a aplicação ASGI do projeto.
+
+> **👉 Em termos simples:**  
+> “Esse teste garante que o Django conseguiu inicializar a aplicação ASGI sem erros.”
+
+Esse teste é importante porque:
+
+ - o ASGI é usado por servidores como Daphne, Uvicorn e Hypercorn
+ - qualquer erro nesse arquivo impede o projeto de subir em produção
+
+Vamos começar criando uma **função de teste** chamada `test_asgi_application_is_created()`:
+
+[tests/test_asgi.py](../tests/test_asgi.py)
+```python
+def test_asgi_application_is_created():
+    """
+    Testa se a aplicação ASGI do Django é criada corretamente.
+    """
+```
+
+### `🅰️ Arrange — Preparando o cenário`
+
+Nesta etapa, nós não precisamos preparar quase nada manualmente.
+
+Isso porque:
+
+ - o Django já carrega automaticamente as configurações
+ - o arquivo `core/asgi.py` já define:
+
+```python
+os.environ.setdefault(
+    'DJANGO_SETTINGS_MODULE',
+    'core.settings',
+)
+```
+
+O que precisamos fazer aqui é importar o objeto que será testado.
+
+[tests/test_asgi.py](../tests/test_asgi.py)
+```python
+from core.asgi import application
+
+
+def test_asgi_application_is_created():
+    """
+    Testa se a aplicação ASGI do Django é criada corretamente.
+    """
+```
+
+> **🔍 O que acontece nesse import?**
+
+ - O Python executa o arquivo core/asgi.py
+ - O Django:
+   - garante que `DJANGO_SETTINGS_MODULE` está definido
+ - chama `get_asgi_application()` (que está em `core/asgi.py`)
+ - O objeto `application` é criado
+
+### `🅰️🅰️ Act — Executando a ação`
+
+Aqui a ação é mínima, mas ainda existe:
+
+> 👉 Nós simplesmente acessamos o objeto application.
+
+[tests/test_asgi.py](../tests/test_asgi.py)
+```python
+from core.asgi import application
+
+
+def test_asgi_application_is_created():
+    """
+    Testa se a aplicação ASGI do Django é criada corretamente.
+    """
+
+    # Arrange
+    # (nenhuma preparação manual é necessária)
+
+    # Act
+    app = application
+```
+
+Isso confirma que:
+
+ - o import foi bem-sucedido
+ - o objeto existe em memória
+
+### `🅰️🅰️🅰️ Assert — Verificando o resultado`
+
+Agora vamos criar um único `assert`, focando em uma coisa só:
+
+[tests/test_asgi.py](../tests/test_asgi.py)
+```python
+from core.asgi import application
+
+
+def test_asgi_application_is_created():
+    """
+    Testa se a aplicação ASGI do Django é criada corretamente.
+    """
+
+    # Arrange
+    # (nenhuma preparação manual é necessária)
+
+    # Act
+    app = application
+
+    # Assert
+    assert callable(app)
+```
+
+> **O que esse assert garante?**
+
+ - **Que application:**
+   - existe
+   - é um objeto chamável
+ - **Ou seja:**
+   - o Django criou corretamente a aplicação ASGI
+ - **Se houver erro em:**
+   - settings
+   - imports
+   - middleware
+   - apps instalados
+   - **NOTE:** esse teste falha automaticamente.
+
+### `📄 Código final completo do teste`
+
+[tests/test_asgi.py](../tests/test_asgi.py)
+```python
+from core.asgi import application
+
+
+def test_asgi_application_is_created():
+    """
+    Testa se a aplicação ASGI do Django é criada corretamente.
+    """
+
+    # Arrange
+    # (nenhuma preparação manual é necessária)
+
+    # Act
+    app = application
+
+    # Assert
+    assert callable(app)
+```
+
+
+### `Testando`
+
+Se você desejar rodar esse teste específico você pode executar o seguinte comando:
+
+```bash
+pytest -s -x --cov=. -vv tests/test_asgi.py::test_asgi_application_is_created
 ```
 
 ---
