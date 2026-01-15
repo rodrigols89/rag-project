@@ -22,15 +22,113 @@
    - [`Instalando e configurando o pre-commit`](#precommit-settings)
    - [`Criando o diretório (pasta) .github/workflows/`](#github-workflows)
    - [`Criando o workflow lint.yml`](#github-workflows-lint-yml)
+   - [`Criando App "users"`](#app-users)
  - **Testes:**
    - [`Criando testes para o manage.py`](#manage-py-tests)
    - [`Testando se a URL /admin/ está registrada corretamente`](#test-admin-url-is-registered)
    - [`Testando se a aplicação ASGI do Django é criada corretamente`](#test-asgi-application-is-created)
+   - [`Testando se o app "users" está instalado no Django`](#test-users-app-is-installed)
 <!---
 [WHITESPACE RULES]
 - Same topic = "40" Whitespace character.
 - Different topic = "200" Whitespace character.
 --->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3457,6 +3555,185 @@ jobs:
 
 
 
+---
+
+
+<div id="app-users"></div>
+
+## `Criando App "users"`
+
+> Aqui nós vamos criar o App `users` que vai ser responsável por armazenar os dados dos nossos usuários no Banco de Dados.
+
+```bash
+python manage.py startapp users
+```
+
+[core/settings.py](../core/settings.py)
+```python
+INSTALLED_APPS = [
+    ...
+    'users',
+]
+```
+
+Para não esquecer vamos já relacionar as rotas do App `users` no nosso projeto `core/urls.py`:
+
+[core/urls.py](../core/urls.py)
+```python
+from django.contrib import admin
+from django.urls import include, path
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("", include("users.urls")),
+]
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3888,28 +4165,6 @@ def test_admin_url_is_registered():
    - Que o arquivo core/urls.py está funcionando corretamente
    - 👉 Se a URL for removida, alterada ou quebrada, esse teste falha.
 
-### `📄 Código final completo do teste`
-
-[tests/test_urls.py](../tests/test_urls.py)
-```python
-from django.urls import resolve
-
-
-def test_admin_url_is_registered():
-    """
-    Testa se a URL /admin/ está registrada no sistema de rotas do Django.
-    """
-
-    # Arrange
-    # (não é necessário preparar nada além do carregamento do Django)
-
-    # Act
-    match = resolve('/admin/')
-
-    # Assert
-    assert match is not None
-```
-
 ### `Testando`
 
 Se você desejar rodar esse teste específico você pode executar o seguinte comando:
@@ -4099,29 +4354,6 @@ def test_asgi_application_is_created():
    - apps instalados
    - **NOTE:** esse teste falha automaticamente.
 
-### `📄 Código final completo do teste`
-
-[tests/test_asgi.py](../tests/test_asgi.py)
-```python
-from core.asgi import application
-
-
-def test_asgi_application_is_created():
-    """
-    Testa se a aplicação ASGI do Django é criada corretamente.
-    """
-
-    # Arrange
-    # (nenhuma preparação manual é necessária)
-
-    # Act
-    app = application
-
-    # Assert
-    assert callable(app)
-```
-
-
 ### `Testando`
 
 Se você desejar rodar esse teste específico você pode executar o seguinte comando:
@@ -4129,6 +4361,177 @@ Se você desejar rodar esse teste específico você pode executar o seguinte com
 ```bash
 pytest -s -x --cov=. -vv tests/test_asgi.py::test_asgi_application_is_created
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+<div id="test-users-app-is-installed">
+
+## `Testando se o app "users" está instalado no Django`
+
+> Aqui, nós vamos criar um teste automatizado simples para garantir que o aplicativo `users` está corretamente instalado no projeto Django.
+
+Em termos simples:
+
+ - o Django só reconhece um app se ele estiver listado em `INSTALLED_APPS`
+ - se o app não estiver lá, models, sinais, migrations e views não funcionam
+
+Vamos começar criando uma **função de teste** chamada `test_users_app_is_installed()`:
+
+[tests/test_apps.py](../tests/test_apps.py)
+```python
+def test_users_app_is_installed():
+    """
+    Testa se o app 'users' está registrado em INSTALLED_APPS.
+    """
+    ...
+```
+
+### `🅰️ Arrange — Preparando o cenário`
+
+Nesta etapa, precisamos apenas acessar o registro de apps do Django.
+
+[tests/test_apps.py](../tests/test_apps.py)
+```python
+from django.apps import apps
+
+def test_users_app_is_installed():
+    """
+    Testa se o app 'users' está registrado em INSTALLED_APPS.
+    """
+    ...
+```
+
+ - Esse objeto (apps) já está disponível assim que o Django inicia.
+ - Ele sabe exatamente quais apps estão instalados e carregados.
+ - *📌 Não precisamos mockar nada aqui, porque:*
+   - o Django já foi inicializado pelo pytest-django
+   - o `settings.py` já foi carregado
+
+### `🅰️🅰️ Act — Executando a ação`
+
+Agora vamos executar a ação principal do teste:
+
+> 👉 perguntar ao Django se o app users está instalado.
+
+[tests/test_apps.py](../tests/test_apps.py)
+```python
+from django.apps import apps
+
+
+def test_users_app_is_installed():
+    """
+    Testa se o app 'users' está registrado em INSTALLED_APPS.
+    """
+
+    # Arrange
+    # (nenhuma preparação extra é necessária)
+
+    # Act
+    app_config = apps.get_app_config("users")
+```
+
+ - **O que acontece aqui?**
+   - O Django procura um app com o label `"users"`
+   - Se o app não existir, o Django lança uma exceção
+   - Se o app existir, ele retorna um objeto de configuração do app
+ - **Ou seja:**
+   - se chegarmos até a próxima linha do teste, o app existe 👍
+
+### `🅰️🅰️🅰️ Assert — Verificando o resultado`
+
+Agora vamos criar um **único assert**, focando em uma coisa só:
+
+> 👉 garantir que o app foi encontrado.
+
+[tests/test_apps.py](../tests/test_apps.py)
+```python
+from django.apps import apps
+
+
+def test_users_app_is_installed():
+    """
+    Testa se o app 'users' está registrado em INSTALLED_APPS.
+    """
+
+    # Arrange
+    # (nenhuma preparação extra é necessária)
+
+    # Act
+    app_config = apps.get_app_config("users")
+
+    # Assert
+    assert app_config.name == "users"
+```
+
+ - **O que esse assert garante?**
+   - Que o app users:
+     - está listado em `INSTALLED_APPS`
+     - foi carregado corretamente pelo Django
+     - possui uma configuração válida
+ - **Ou seja:**
+   - 👉 Se alguém remover `"users"` do `INSTALLED_APPS`, esse teste falha imediatamente.
+
+
+### `Testando`
+
+Se você desejar rodar esse teste específico você pode executar o seguinte comando:
+
+```bash
+pytest -s -x --cov=. -vv tests/test_apps.py::test_users_app_is_installed
+```
+
 
 ---
 

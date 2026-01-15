@@ -60,10 +60,28 @@ python_files = ["tests.py", "test_*.py", "*_tests.py"]
 # Ativar automaticamente o pytest-django
 django_find_project = true
 
+# Arquivos/códigos que devem ser ignorados pelo pytest
 [tool.coverage.run]
 omit = [
-    "*/__init__.py",
+    "*/tests/*",
+    "*test_*.py",
+    "*_test.py",
+    "*_tests.py",
+    "tests.py",
     "*/migrations/*",
+    "*/__init__.py",
+]
+
+# Arquivos/códigos que devem ser ignorados no relatório de cobertura
+[tool.coverage.report]
+omit = [
+    "*/tests/*",
+    "*test_*.py",
+    "*_test.py",
+    "*_tests.py",
+    "tests.py",
+    "*/migrations/*",
+    "*/__init__.py",
 ]
 
 
