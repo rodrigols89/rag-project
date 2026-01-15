@@ -22,6 +22,7 @@
  - [`Criando testes para o manage.py`](#manage-py-tests)
  - [`Criando o diretório (pasta) .github/workflows/`](#github-workflows)
  - [`Criando o workflow lint.yml`](#github-workflows-lint-yml)
+ - [`test_admin_url_is_registered()`](#test-admin-url-is-registered)
 <!---
 [WHITESPACE RULES]
 - "40" Whitespace character.
@@ -3606,6 +3607,196 @@ jobs:
 
 > **NOTE:**  
 > Continuando, agora é só fazer o commit e push ou pull_request na branche ci-cd que o workflow será acionado.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+<div id="test-admin-url-is-registered"></div>
+
+## `Testando se a URL /admin/ está registrada corretamente`
+
+> Aqui, nós vamos criar um teste automatizado simples para garantir que a URL `/admin/` está corretamente registrada no sistema de rotas do Django.
+
+Vamos começar criando uma **função de teste** chamada `test_admin_url_is_registered()`:
+
+[tests/test_urls.py](../tests/test_urls.py)
+```python
+def test_admin_url_is_registered():
+    """
+    Testa se a URL /admin/ está registrada no sistema de rotas do Django.
+    """
+    ...
+```
+
+### `🅰️ Arrange — Preparando o cenário`
+
+Continuando, nesta etapa (Arrange), nós não vamos precisar preparar quase nada, porque:
+
+ - o Django já carrega automaticamente o `ROOT_URLCONF`
+ - o arquivo `core/urls.py` já está configurado no projeto
+
+Mesmo assim, precisamos importar a função que será usada para testar URLs:
+
+[tests/test_urls.py](../tests/test_urls.py)
+```python
+from django.urls import resolve
+```
+
+ - A função `resolve()`:
+   - recebe uma URL como string
+   - tenta encontrar essa URL no `urlpatterns = [...]`
+   - retorna informações sobre a rota encontrada
+
+### `🅰️🅰️ Act — Executando a ação`
+
+Agora vamos executar a ação (Act) principal do teste que vai ser **pedir para o Django resolver a URL `/admin/`**:
+
+[tests/test_urls.py](../tests/test_urls.py)
+```python
+from django.urls import resolve
+
+
+def test_admin_url_is_registered():
+    """
+    Testa se a URL /admin/ está registrada no sistema de rotas do Django.
+    """
+
+    # Arrange
+    # (não é necessário preparar nada além do carregamento do Django)
+
+    # Act
+    match = resolve('/admin/')
+```
+
+ - **O que a função `resolve()` faz?**
+   - Ela serve para descobrir qual view o Django executaria ao receber uma determinada URL.
+   - Em outras palavras:
+     - 👉 “Se um usuário acessasse essa URL no navegador, qual código (view) seria chamado?”
+ - **Quais parâmetros `resolve()` recebe?**
+   - 1️⃣ `path (obrigatório)`
+     - É o caminho da URL, exatamente como o Django receberia na requisição HTTP
+     - Por exemplo, `/admin/`
+   - 2️⃣ `urlconf (opcional)`
+     - Permite especificar manualmente um conjunto de URLs
+     - Normalmente não é usado em testes comuns
+ - **O que a função resolve() retorna?**
+   - Se a URL for encontrada, resolve() retorna um objeto do tipo:
+     - `django.urls.resolvers.ResolverMatch`
+   - Principais atributos retornados:
+     - `match.func` → A view que será chamada
+     - `match.view_name` → Nome da view (se houver)
+     - `match.args` → Argumentos posicionais da URL
+     - `match.kwargs` → Argumentos nomeados da URL
+     - `match.route` → Padrão da rota que deu match
+
+### `🅰️🅰️🅰️ Assert — Verificando o resultado`
+
+Continuando, agora vamos criar um único `assert` que verifique se a URL `/admin/` foi encontrada:
+
+[tests/test_urls.py](../tests/test_urls.py)
+```python
+from django.urls import resolve
+
+
+def test_admin_url_is_registered():
+    """
+    Testa se a URL /admin/ está registrada no sistema de rotas do Django.
+    """
+
+    # Arrange
+    # (não é necessário preparar nada além do carregamento do Django)
+
+    # Act
+    match = resolve('/admin/')
+
+    # Assert
+    assert match is not None
+```
+
+ - **O que esse assert garante?**
+   - Que o Django conseguiu resolver a URL /admin/
+   - Que essa rota está registrada
+   - Que o arquivo core/urls.py está funcionando corretamente
+   - 👉 Se a URL for removida, alterada ou quebrada, esse teste falha.
+
+### `📄 Código final completo do teste`
+
+[tests/test_urls.py](../tests/test_urls.py)
+```python
+from django.urls import resolve
+
+
+def test_admin_url_is_registered():
+    """
+    Testa se a URL /admin/ está registrada no sistema de rotas do Django.
+    """
+
+    # Arrange
+    # (não é necessário preparar nada além do carregamento do Django)
+
+    # Act
+    match = resolve('/admin/')
+
+    # Assert
+    assert match is not None
+```
+
+### `Testando`
+
+Se você desejar rodar esse teste específico você pode executar o seguinte comando:
+
+```bash
+pytest -s -x --cov=. -vv tests/test_urls.py::test_admin_url_is_registered
+```
 
 ---
 
