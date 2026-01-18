@@ -2,13 +2,13 @@ name: Lint
 
 on:
   push:
-    branches: [ ci-cd ]
+    branches: [ develop ]
     paths:
       - "**/*.py"
       - "requirements*.txt"
       - "pyproject.toml"
   pull_request:
-    branches: [ ci-cd ]
+    branches: [ develop ]
     paths:
       - "**/*.py"
       - "requirements*.txt"

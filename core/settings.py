@@ -17,10 +17,34 @@ SECRET_KEY = (
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+
+##############################################################################
+# Hosts/domain names that are valid for this site/project                    #
+##############################################################################
+
+allowed_hosts = os.getenv(
+    "DJANGO_ALLOWED_HOSTS",
+    "localhost,127.0.0.1",
+)
+
+if allowed_hosts == "*":
+    ALLOWED_HOSTS = ["*"]
+else:
+    ALLOWED_HOSTS = [
+        host.strip()
+        for host in allowed_hosts.split(",")
+        if host.strip()
+    ]
+
+# Necessário para Django Test Client
+if "testserver" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append("testserver")
 
 
-# Application definition
+##############################################################################
+# Application definition                                                     #
+##############################################################################
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -31,6 +55,11 @@ INSTALLED_APPS = [
 
     "users",
 ]
+
+
+##############################################################################
+# Middleware settings                                                        #
+##############################################################################
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -43,6 +72,11 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "core.urls"
+
+
+##############################################################################
+# Templates settings                                                         #
+##############################################################################
 
 TEMPLATES = [
     {
@@ -59,10 +93,18 @@ TEMPLATES = [
     },
 ]
 
+
+##############################################################################
+# WSGI settings                                                              #
+##############################################################################
+
 WSGI_APPLICATION = "core.wsgi.application"
 
 
-# Database
+##############################################################################
+# Database settings                                                          #
+##############################################################################
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -75,8 +117,9 @@ DATABASES = {
 }
 
 
-# Password validation
-# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
+##############################################################################
+# Password validation                                                        #
+##############################################################################
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -106,8 +149,9 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
+##############################################################################
+# Internationalization                                                       #
+##############################################################################
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
@@ -115,9 +159,18 @@ USE_I18N = True
 USE_TZ = True
 
 
+##############################################################################
+# Static files (CSS, JavaScript, Images)                                     #
+##############################################################################
+
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+
+##############################################################################
+# Media files                                                                #
+##############################################################################
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"

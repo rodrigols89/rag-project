@@ -2,9 +2,9 @@ name: Docker
 
 on:
   push:
-    branches: [ ci-cd ]
+    branches: [ develop ]
   pull_request:
-    branches: [ ci-cd ]
+    branches: [ develop ]
 
 jobs:
   docker-ci:
