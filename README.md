@@ -291,7 +291,6 @@ flowchart TD
 
 > **A branch develop é utilizada para o trabalho diário.**
 
- - Aqui os commits são rápidos e frequentes, sem necessidade de executar pipelines de CI/CD.
  - Rodam os testes e o lint.
  - CI/CD são executados a cada push ou pull request.
  - Ela pode conter código instável, protótipos ou modificações ainda em validação.
