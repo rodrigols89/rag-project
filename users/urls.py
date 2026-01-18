@@ -1,7 +1,15 @@
 from django.urls import path
 
-from .views import login_view
+from users import views
 
 urlpatterns = [
-    path(route="", view=login_view, name="index"),
+    path(
+        route="",
+        view=views.login_view,
+        name="index"),
+    path(
+        route="create-account/",
+        view=views.create_account,
+        name="create-account"
+    ),
 ]

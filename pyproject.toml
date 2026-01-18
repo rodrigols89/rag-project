@@ -110,6 +110,11 @@ docker rmi -f $(docker images -aq) 2>/dev/null || true &&
 docker volume rm $(docker volume ls -q) 2>/dev/null || true &&
 docker system prune -a --volumes -f
 """
+# --------------------- ( Docker Exec ) ---------------------
+opendb = 'docker exec -it postgresql psql -U raguser -d rag_db'
+openweb = 'docker exec -it django bash'
+opennginx = 'docker exec -it nginx bash'
+openredis = 'docker exec -it redis bash'
 # ------------------ ( Project Management ) -----------------
 exportdev = "poetry export --without-hashes --with dev --format=requirements.txt --output=requirements-dev.txt"
 exportprod = "poetry export --without-hashes --format=requirements.txt --output=requirements.txt"

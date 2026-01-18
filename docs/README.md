@@ -24,6 +24,7 @@
    - [`Criando o workflow lint.yml`](#github-workflows-lint-yml)
    - [`Criando App "users"`](#app-users)
    - [`Criando a landing page da aplicação (base.html + index.html)`](#landing-page)
+   - [`Criando a página de cadastro (create-account.html + DB Commands)`](#create-account)
  - **Testes:**
    - [`Criando testes para o manage.py`](#manage-py-tests)
    - [`Testando se a URL /admin/ está registrada corretamente`](#test-admin-url-is-registered)
@@ -3832,7 +3833,6 @@ INSTALLED_APPS = [
 
 ---
 
-
 <div id="landing-page"></div>
 
 ## `Criando a landing page da aplicação (base.html + index.html)`
@@ -4218,6 +4218,957 @@ Finalmente, se você abrir o projeto (site) na rota/url principal vai aparecer e
 
 ![landing page](images/index-landing-01.png)  
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+<div id="create-account"></div>
+
+## `Criando a página de cadastro (create-account.html + DB Commands)`
+
+> Aqui nós vamos *criar* e *configurar* a nossa `página de cadastro`.
+
+Vamos começar configurando a rota/url `create-account`:
+
+[users/urls.py](../users/urls.py)
+```python
+from django.urls import path
+
+from users import views
+
+urlpatterns = [
+
+    ...
+
+    path(
+        route="create-account/",
+        view=views.create_account,
+        name="create-account"
+    ),
+]
+```
+
+### `Criando o formulário personalizado de criação de usuário`
+
+Agora, antes de criar a view (ação) que vai ser responsável por redirecionar o usuário para a página de cadastro (GET) e enviar os dados para o Banco de Dados (POST), vamos criar um formulário personalizado usando o Django.
+
+O Django já vem com um formulário pronto para criar usuários (`UserCreationForm`), mas:
+
+ - queremos personalizar os campos
+ - traduzir labels
+ - criar mensagens de erro em português
+ - impedir que dois usuários usem o mesmo e-mail
+
+Vamos começar importanto os seguintes módulos do Django:
+
+[users/forms.py](../users/forms.py)
+```python
+from django import forms
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+```
+
+ - `from django import forms`
+   - **O que faz?**
+     - Importa o módulo de formulários do Django.
+   - **Para que vamos usar?**
+     - Para criar validações customizadas e lançar erros (forms.ValidationError).
+ - `from django.contrib.auth.forms import UserCreationForm`
+   - **O que faz?**
+     - Importa o formulário padrão do Django para criação de usuários.
+   - **O que ele já faz automaticamente?**
+     - Cria os campos:
+       - username
+       - password1
+       - password2
+     - Valida:
+       - se o usuário já existe
+       - se as senhas coincidem
+       - se a senha segue regras de segurança
+   - **O que ele retorna?**
+     - Um formulário pronto para uso, que salva um usuário no banco.
+ - `from django.contrib.auth.models import User`
+   - **O que faz?**
+     - Importa o modelo padrão de usuário do Django.
+   - **Para que vamos usar?**
+     - Para:
+       - definir o modelo do formulário
+       - consultar usuários no banco (ex: validar e-mail duplicado)
+
+Continuando, vamos criar uma classe chamada `CustomUserCreationForm()` que vai herdar de `UserCreationForm`:
+
+[users/forms.py](../users/forms.py)
+```python
+class CustomUserCreationForm(UserCreationForm):
+    ...
+```
+
+Agora, vamos criar uma classe interna `Meta` que vai ter uma instância de `User`:
+
+[users/forms.py](../users/forms.py)
+```python
+class CustomUserCreationForm(UserCreationForm):
+    class Meta:
+        model = User
+```
+
+ - **O que é a classe Meta?**
+   - É onde informamos configurações do formulário
+   - O Django usa essas informações para:
+     - saber qual modelo salvar
+     - quais campos exibir
+     - como exibir esses campos
+ - **model = User**
+   - **O que faz?**
+     - Diz ao Django:
+       - *“Este formulário cria objetos do modelo User.”*
+   - **Resultado prático:**
+     - Quando o formulário for salvo, um usuário será criado no banco.
+
+Agora, vamos definir quais campos aparecerão no formulário (A ordem da lista define a ordem na tela):
+
+[users/forms.py](../users/forms.py)
+```python
+class CustomUserCreationForm(UserCreationForm):
+    class Meta:
+        model = User
+
+        # Form fields
+        fields = [
+            "username",
+            "email",
+            "password1",
+            "password2"
+        ]
+```
+
+ - **📌 Observação importante:**
+   - `password1` e `password2` já existem no `UserCreationForm`
+   - `email` estamos adicionando explicitamente
+
+Agora, nós vamos criar alguns labels que nada mais serão que um mapeamento entre os campos (fields) e nomes amigaveis para o usuário:
+
+[users/forms.py](../users/forms.py)
+```python
+class CustomUserCreationForm(UserCreationForm):
+    class Meta:
+        model = User
+
+        # Form fields
+        fields = [
+            "username",
+            "email",
+            "password1",
+            "password2"
+        ]
+
+        # Labels for the form fields
+        labels = {
+            "username": "Usuário",
+            "email": "Email",
+            "password1": "Senha",
+            "password2": "Confirmar Senha",
+        }
+```
+
+ - **O que isso faz?**
+   - Altera os textos exibidos no HTML
+ - **Em vez de:**
+   - username
+ - **O usuário verá:**
+   - Usuário
+ - `👉 Isso melhora a experiência do usuário.`
+
+Agora, vamos implementar algumas mensagens de erros para os campos `username` e `password2` que serão utilizados quando:
+
+ - `username`
+   - Dizendo que o campo de usuário é obrigatória
+   - Já existe um usuário com esse nome
+ - `password2`
+   - Dizendo que as duas senhas não coincidem
+
+[users/forms.py](../users/forms.py)
+```python
+class CustomUserCreationForm(UserCreationForm):
+
+    ...
+
+        # Custom error messages
+        error_messages = {
+            "username": {
+                "unique": "Já existe um usuário com este nome.",
+                "required": "O campo Usuário é obrigatório.",
+            },
+            "password2": {
+                "password_mismatch": "As senhas não correspondem.",
+            },
+        }
+```
+
+ - **O que isso faz?**
+   - Substitui mensagens de erro padrão (em inglês)
+   - Define mensagens claras e em português
+ - `"username"`
+   - `"unique"`
+     - Disparado quando o nome de usuário já existe no banco
+   - `"required"`
+     - Disparado quando o campo não é preenchido
+ - `"password2"`
+   - `"password_mismatch"`
+     - Disparado quando:
+       - password1 ≠ password2
+   - 📌 Essa validação já existe, aqui só mudamos a mensagem.
+
+Agora, nós vamos criar uma *método* chamado `clean_email()` que será responsável por validar o campo `email`:
+
+[users/forms.py](../users/forms.py)
+```python
+class CustomUserCreationForm(UserCreationForm):
+
+    ...
+
+    # Custom validation for email field
+    def clean_email(self):
+        email = self.cleaned_data.get("email")
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError(
+                "Este e-mail já está cadastrado."
+            )
+        return email
+```
+
+ - `email = self.cleaned_data.get("email")`
+   - `.get("email")`
+     - retorna o valor do campo email
+     - ou None se não existir
+ - `if User.objects.filter(email=email).exists():`
+   - Verifica se já existe algum usuário com o mesmo e-mail
+ - `raise forms.ValidationError("Este e-mail já está cadastrado.")`
+   - **O que isso faz?**
+     - Interrompe a validação
+     - Marca o formulário como inválido
+     - Exibe a mensagem de erro no campo email
+  - **📌 Importante:**
+    - O formulário não será salvo
+    - O usuário verá o erro na tela
+ - `return email`
+   - Se o e-mail não existir no banco:
+     - ele é considerado válido
+     - retorna para o fluxo normal do formulário
+
+### `Criando a view (ação) create_account()`
+
+Agora, nós vamos criar uma view (ação) para:
+
+ - Quando alguém clicar em "Cadastrar" na [landing page (index.html)](../templates/pages/index.html) seja redirecionado para [página de cadastro (create-account.html)](../users/templates/pages/create-account.html).
+ - E quando alguém cadastrar algum usuário (corretamente), ele seja salvo no Banco de Dados e depois redirecionado para a [landing page (index.html)](../templates/pages/index.html).
+
+Essa view faz três coisas principais:
+
+ - 📄 Mostra um formulário de cadastro (GET)
+ - 📨 Recebe os dados enviados pelo usuário (POST)
+ - ✅ Valida, cria o usuário e mostra mensagens de sucesso ou erro
+
+Vamos começar criando importando os módulos necessários:
+
+[users/views.py](../users/views.py)
+```python
+from django.contrib import messages
+from django.shortcuts import redirect, render
+
+from users.forms import CustomUserCreationForm
+```
+
+ - `from django.contrib import messages`
+   - Importa o framework de mensagens do Django, usado para mostrar mensagens temporárias ao usuário.
+ - `from django.shortcuts import redirect, render`
+   - `render()`
+     - **O que faz?**
+       - Renderiza um template HTML
+       - Junta HTML + dados (contexto)
+     - **Parâmetros:**
+       - request
+       - nome do template (string)
+       - contexto (dicionário)
+    - **Retorno**
+      - Um `HttpResponse` com HTML pronto
+   - `redirect()`
+     - **O que faz?**
+       - Redireciona o usuário para outra URL
+     - **Parâmetros:**
+       - Uma URL ("/", "/login/", etc.)
+     - **Retorno:**
+       - Um `HttpResponseRedirect`
+ - `from users.forms import CustomUserCreationForm`
+   - Importa o formulário criado anteriormente: [users/forms.py](../users/forms.py)
+
+Ótimo, agora nós vamos começar criando uma view (ação) chamada `create_account()` que vai ter como parâmetro um `request`:
+
+[users/views.py](../users/views.py)
+```python
+def create_account(request):
+    ...
+```
+
+Agora nós vamos criar uma condição para verificar se o método HTTP utilizado pelo o usuário foi `GET`:
+
+[users/views.py](../users/views.py)
+```python
+def create_account(request):
+
+    # Check if the request method is GET
+    if request.method == "GET":
+        ...
+```
+
+ - **O que isso significa?**
+   - `GET` acontece quando:
+     - o usuário digita a URL no navegador
+     - clica em um link
+     - Não há envio de dados ainda
+
+Agora, dentro do nosso `if` nós vamos criar uma instância chamada `form` do nosso formulário personalizado `CustomUserCreationForm()`:
+
+[users/views.py](../users/views.py)
+```python
+def create_account(request):
+
+    # Check if the request method is GET
+    if request.method == "GET":
+
+        # Initialize an empty form
+        form = CustomUserCreationForm()
+```
+
+ - **O que essa linha faz?**
+   - Cria uma instância vazia do formulário
+   - Nenhum dado foi enviado ainda
+ - **Para que isso serve?**
+   - Mostrar os campos:
+     - `username`
+     - `email`
+     - `senha`
+     - `confirmação de senha`
+
+Agora que nós temos uma instância do nosso formulário personalizado, vamos passar ele como contexto para o template:
+
+[users/views.py](../users/views.py)
+```python
+def create_account(request):
+
+    # Check if the request method is GET
+    if request.method == "GET":
+
+        # Initialize an empty form
+        form = CustomUserCreationForm()
+
+        # Render the form in the template
+        return render(
+            request,
+            "pages/create-account.html",
+            {"form": form}
+        )
+```
+
+ - **O que acontece aqui?**
+   - O Django carrega o template:
+     - `pages/create-account.html`
+   - Injeta o formulário no template:
+     - `{{ form }}`
+   - Retorna a página pronta para o navegador
+
+Como nós já temos tudo pronto para uma requisição do tipo `GET`, agora nós vamos criar uma condição para verificar se o método HTTP utilizado pelo o usuário foi `POST`:
+
+[users/views.py](../users/views.py)
+```python
+def create_account(request):
+
+    # Check if the request method is GET
+    if request.method == "GET":
+        ...
+
+    # Check if the request method is POST
+    elif request.method == "POST":
+        ...
+```
+
+ - **Quando isso acontece?**
+   - Quando o usuário:
+     - preenche o formulário
+     - clica em “Criar conta”
+     - O navegador envia os dados para o servidor
+
+Continuando, como nós sabemos que o método utilizado foi `POST`, nós podemos utilizar `request.POST` para criar uma instância de `CustomUserCreationForm` com os dados recebidos no `POST`:
+
+[users/views.py](../users/views.py)
+```python
+def create_account(request):
+
+    # Check if the request method is GET
+    if request.method == "GET":
+        ...
+
+    # Check if the request method is POST
+    elif request.method == "POST":
+
+        # Populate the form with POST data
+        form = CustomUserCreationForm(request.POST)
+```
+
+ - **O que é request.POST?**
+   - Um dicionário com os dados enviados.
+
+```json
+{
+  "username": "...",
+  "email": "...",
+  "password1": "...",
+  "password2": "..."
+}
+```
+
+Agora, nós vamos utilizar a função `is_valid()` da a classe `CustomUserCreationForm (herdou de UserCreationForm)` para verificar (validar) se os dados enviados pelo usuário estão ok:
+
+[users/views.py](../users/views.py)
+```python
+def create_account(request):
+
+    # Check if the request method is GET
+    if request.method == "GET":
+        ...
+
+    # Check if the request method is POST
+    elif request.method == "POST":
+
+        # Populate the form with POST data
+        form = CustomUserCreationForm(request.POST)
+
+        # Validate the form data
+        if form.is_valid():
+            ...
+```
+
+ - **O que is_valid() faz?**
+   - **Verifica:**
+     - campos obrigatórios
+     - formatos
+     - senhas iguais
+   - **Executa:**
+     - clean_email()
+   - **Preenche:**
+     - form.cleaned_data
+   - **Retorno:**
+     - `True` → dados válidos
+     - `False` → erros encontrados
+
+Partindo, do pressuposto que está tudo ok, agora nós vamos:
+
+ - Salvar o usuário no banco de dados
+ - Exibir uma mensagem de sucesso
+ - Redirecionar o usuário para a [landing page (index.html)](../templates/pages/index.html)
+
+[users/views.py](../users/views.py)
+```python
+def create_account(request):
+
+    # Check if the request method is GET
+    if request.method == "GET":
+        ...
+
+    # Check if the request method is POST
+    elif request.method == "POST":
+
+        # Populate the form with POST data
+        form = CustomUserCreationForm(request.POST)
+
+        # Validate the form data
+        if form.is_valid():
+            form.save()  # Save the user
+            messages.success(  # Display a success message
+                request,
+                "Conta criada com sucesso! Faça login."
+            )
+            return redirect("/")
+```
+
+ - `form.save()`
+   - **O que essa função faz?**
+     - Cria um objeto User
+     - Criptografa a senha
+     - Salva no banco de dados
+     - 📌 Tudo isso é feito automaticamente pelo Django.
+ - `messages.success()`
+   - **O que essa função faz?**
+     - Registra uma mensagem de sucesso
+     - A mensagem ficará disponível na próxima página
+ - `return redirect("/")`
+   - **O que acontece aqui?**
+     - O usuário é enviado para a página inicial (landing page)
+     - A mensagem de sucesso aparece lá
+
+**NOTE:**  
+Agora, vocês concordam comigo que dentro do nosso `elif request.method == "POST"`, quando `if form.is_valid()` é inválido nós precisamos:
+
+ - Exibir o erro
+ - Redirecionar novamente para a página de cadastro
+
+Então, é isso que nós vamos implementar agora:
+
+[users/views.py](../users/views.py)
+```python
+def create_account(request):
+
+    # Check if the request method is GET
+    if request.method == "GET":
+        ...
+
+    # Check if the request method is POST
+    elif request.method == "POST":
+        ...
+
+        # If the form is not valid, display an error message
+        messages.error(
+            request,
+            "Corrija os erros abaixo."
+        )
+
+        # Re-render the form with error messages
+        return render(
+            request,
+            "pages/create-account.html",
+            {"form": form}
+        )
+```
+
+ - **Por que isso é importante?**
+   - O formulário volta:
+     - preenchido
+     - com mensagens de erro nos campos
+     - O usuário pode corrigir sem perder os dados
+
+**🧠 Resumo mental do fluxo:**
+
+```bash
+        Usuário acessa página (GET)
+                      ↓
+        Formulário vazio aparece
+                      ↓
+        Usuário preenche e envia (POST)
+                      ↓
+                Django valida
+             ↙                ↘
+          ↙                     ↘
+      válido                  inválido
+        ↓                        ↓
+  salva usuário             mostra erros
+        ↓                        ↓ 
+mensagem(Success)          mensagem(Error)
++redirect(/)          re-render form (create-account.html)
+```
+
+### `Criando o template de cadastro (create-account.html)`
+
+> Bem, lembram que nós estamos passando como `contexto` o formulário `form` para o template `create-account.html`?
+
+```python
+form = CustomUserCreationForm(request.POST)
+return render(request, "pages/create-account.html", {"form": form})
+```
+
+Então, nós vamos utilizar esses dados (campos) passado para o template para criar um formulário dinâmico no nosso template:
+
+[users/templates/pages/create-account.html](../users/templates/pages/create-account.html)
+```html
+{% extends "base.html" %}
+
+{% block title %}Criar Conta{% endblock %}
+
+{% block content %}
+
+    <!-- ==================================================================== -->
+    <!-- CONTEÚDO PRINCIPAL - ÁREA DE CADASTRO                                -->
+    <!-- ==================================================================== -->
+    
+    <main class="min-h-screen flex items-center justify-center py-12 
+                 px-4 sm:px-6 lg:px-8">
+        
+        <!-- ================================================================ -->
+        <!-- CARD DE CADASTRO                                                 -->
+        <!-- ================================================================ -->
+        
+        <div class="max-w-md w-full space-y-8 bg-white py-8 px-6 shadow 
+                    rounded-lg">
+            
+            <!-- ============================================================ -->
+            <!-- CABEÇALHO - TÍTULO                                           -->
+            <!-- ============================================================ -->
+            
+            <div class="mb-6 text-center">
+                <h2 class="mt-4 text-2xl font-semibold text-gray-900">
+                    Criar Conta
+                </h2>
+                <p class="mt-1 text-sm text-gray-500">
+                    Preencha os campos abaixo para se cadastrar
+                </p>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- MENSAGENS DO SISTEMA                                         -->
+            <!-- ============================================================ -->
+            
+            <!-- Exibe mensagens de erro ou sucesso do Django -->
+            {% if messages %}
+                <div class="mb-4">
+                    {% for message in messages %}
+                        <div class="text-red-600 bg-red-100 
+                                    border border-red-200 rounded-md 
+                                    px-4 py-2 text-sm">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- ============================================================ -->
+            <!-- FORMULÁRIO DE CADASTRO                                       -->
+            <!-- ============================================================ -->
+            
+            <form method="post" action="" class="space-y-6">
+                <!-- Token CSRF para proteção contra ataques -->
+                {% csrf_token %}
+
+                <!-- Erros gerais do formulário (não relacionados a campos) -->
+                {{ form.non_field_errors }}
+
+                <!-- Campo de Username -->
+                <div>
+                    <label for="{{ form.username.id_for_label }}"
+                           class="block text-sm font-medium 
+                                  text-gray-700">
+                        Usuário
+                    </label>
+                    <div class="mt-1">
+                        <input
+                            type="text"
+                            name="{{ form.username.name }}"
+                            id="{{ form.username.id_for_label }}"
+                            value="{{ form.username.value|default_if_none:'' }}"
+                            class="appearance-none block w-full px-3 py-2 
+                                   border border-gray-300 rounded-md 
+                                   shadow-sm placeholder-gray-400 
+                                   focus:outline-none focus:ring-2 
+                                   focus:ring-blue-500 
+                                   focus:border-blue-500 sm:text-sm"
+                            required>
+                    </div>
+                    <!-- Exibe erros de validação do campo username -->
+                    {% for error in form.username.errors %}
+                        <p class="text-sm text-red-600 mt-1">
+                            {{ error }}
+                        </p>
+                    {% endfor %}
+                </div>
+
+                <!-- Campo de Email -->
+                <div>
+                    <label for="{{ form.email.id_for_label }}"
+                           class="block text-sm font-medium 
+                                  text-gray-700">
+                        Email
+                    </label>
+                    <div class="mt-1">
+                        <input
+                            type="email"
+                            name="{{ form.email.name }}"
+                            id="{{ form.email.id_for_label }}"
+                            value="{{ form.email.value|default_if_none:'' }}"
+                            class="appearance-none block w-full px-3 py-2 
+                                   border border-gray-300 rounded-md 
+                                   shadow-sm placeholder-gray-400 
+                                   focus:outline-none focus:ring-2 
+                                   focus:ring-blue-500 
+                                   focus:border-blue-500 sm:text-sm"
+                            required>
+                    </div>
+                    <!-- Exibe erros de validação do campo email -->
+                    {% for error in form.email.errors %}
+                        <p class="text-sm text-red-600 mt-1">
+                            {{ error }}
+                        </p>
+                    {% endfor %}
+                </div>
+
+                <!-- Campo de Senha -->
+                <div>
+                    <label for="{{ form.password1.id_for_label }}"
+                           class="block text-sm font-medium 
+                                  text-gray-700">
+                        Senha
+                    </label>
+                    <div class="mt-1">
+                        <input
+                            type="password"
+                            name="{{ form.password1.name }}"
+                            id="{{ form.password1.id_for_label }}"
+                            class="appearance-none block w-full px-3 py-2 
+                                   border border-gray-300 rounded-md 
+                                   shadow-sm placeholder-gray-400 
+                                   focus:outline-none focus:ring-2 
+                                   focus:ring-blue-500 
+                                   focus:border-blue-500 sm:text-sm"
+                            required>
+                    </div>
+                    <!-- Exibe erros de validação do campo password1 -->
+                    {% for error in form.password1.errors %}
+                        <p class="text-sm text-red-600 mt-1">
+                            {{ error }}
+                        </p>
+                    {% endfor %}
+                </div>
+
+                <!-- Campo de Confirmar Senha -->
+                <div>
+                    <label for="{{ form.password2.id_for_label }}"
+                           class="block text-sm font-medium 
+                                  text-gray-700">
+                        Confirmar Senha
+                    </label>
+                    <div class="mt-1">
+                        <input
+                            type="password"
+                            name="{{ form.password2.name }}"
+                            id="{{ form.password2.id_for_label }}"
+                            class="appearance-none block w-full px-3 py-2 
+                                   border border-gray-300 rounded-md 
+                                   shadow-sm placeholder-gray-400 
+                                   focus:outline-none focus:ring-2 
+                                   focus:ring-blue-500 
+                                   focus:border-blue-500 sm:text-sm"
+                            required>
+                    </div>
+                    <!-- Exibe erros de validação do campo password2 -->
+                    {% for error in form.password2.errors %}
+                        <p class="text-sm text-red-600 mt-1">
+                            {{ error }}
+                        </p>
+                    {% endfor %}
+                </div>
+
+                <!-- Botão de Submit -->
+                <div>
+                    <button type="submit"
+                            class="w-full flex justify-center py-2 px-4 
+                                   border border-transparent rounded-md 
+                                   shadow-sm text-sm font-medium 
+                                   text-white bg-blue-600 hover:bg-blue-700 
+                                   focus:outline-none focus:ring-2 
+                                   focus:ring-offset-2 
+                                   focus:ring-blue-500">
+                        Criar Conta
+                    </button>
+                </div>
+
+            </form>
+
+            <!-- ============================================================ -->
+            <!-- DIVISOR - SEPARADOR VISUAL                                   -->
+            <!-- ============================================================ -->
+            
+            <div class="mt-6 relative">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-gray-200"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                    <span class="bg-white px-2 text-gray-500">ou</span>
+                </div>
+            </div>
+
+            <!-- ============================================================ -->
+            <!-- RODAPÉ - LINK PARA LOGIN                                     -->
+            <!-- ============================================================ -->
+            
+            <p class="mt-6 text-center text-sm text-gray-600">
+                Já tem uma conta?
+                <a href="/" 
+                   class="font-medium text-blue-600 
+                          hover:text-blue-700">
+                    Fazer login
+                </a>
+            </p>
+
+        </div>
+
+    </main>
+{% endblock %}
+```
+
+**NOTE:**  
+Agora, nós precisamos referenciar que quando alguém clicar em "Cadastrar" na minha [Landing Page (index.html)](../templates/pages/index.html) seja redirecionado para a [Página de cadastro (create-account.html)](../users/templates/pages/create-account.html):
+
+[index.html](../templates/pages/index.html)
+```html
+<p class="mt-6 text-center text-sm text-gray-600">
+    Não tem conta?
+    <a href="{% url 'create-account' %}" 
+        class="font-medium text-blue-600 
+              hover:text-blue-700">
+        Cadastrar
+    </a>
+</p>
+```
+
+Ótimo, agora vamos visualizar o resultado:
+
+![landing page](images/create-account-01-400x600.png)  
+
+Agora tem um porém, se você digitar senhas que não coincidem ou tentar cadastrar um usuário que já existe você vai ter um erro, como:
+
+ - `The two password fields didn’t match.`
+ - `A user with that username already exists.`
+
+> **NOTE:**  
+> Isso acontece porque o Django, por padrão, usa mensagens de *validação internas em inglês*.
+
+Para resolver isso abra seu arquivo [core/settings.py](../core/settings.py) e localize (ou adicione, se não existir) as seguintes variáveis:
+
+[core/settings.py](../core/settings.py)
+```python
+LANGUAGE_CODE = "pt-br"
+TIME_ZONE = "America/Sao_Paulo"
+USE_I18N = True
+USE_TZ = True
+```
+
+Ótimo, agora suas mensagens de erro serão em português.
+
+> **Por fim, como eu sei que os usuários estão sendo gravados no Banco de Dados?**
+
+Primeiro, vamos abrir o container que tem PostgreSQL:
+
+```bash
+task opendb
+```
+
+Agora vamos listar as tabelas:
+
+```bash
+\dt+
+```
+
+**OUTPUT:**
+```bash
+                                               List of relations
+ Schema |            Name            | Type  |  Owner  | Persistence | Access method |    Size    | Description
+--------+----------------------------+-------+---------+-------------+---------------+------------+-------------
+ public | auth_group                 | table | easyrag | permanent   | heap          | 0 bytes    |
+ public | auth_group_permissions     | table | easyrag | permanent   | heap          | 0 bytes    |
+ public | auth_permission            | table | easyrag | permanent   | heap          | 8192 bytes |
+ public | auth_user                  | table | easyrag | permanent   | heap          | 16 kB      |
+ public | auth_user_groups           | table | easyrag | permanent   | heap          | 0 bytes    |
+ public | auth_user_user_permissions | table | easyrag | permanent   | heap          | 0 bytes    |
+ public | django_admin_log           | table | easyrag | permanent   | heap          | 8192 bytes |
+ public | django_content_type        | table | easyrag | permanent   | heap          | 8192 bytes |
+ public | django_migrations          | table | easyrag | permanent   | heap          | 16 kB      |
+ public | django_session             | table | easyrag | permanent   | heap          | 16 kB      |
+```
+
+Agora, vamos listas as colunas da tabela `auth_user`:
+
+```bash
+\d auth_user
+```
+
+**OUTPUT:**
+```bash
+                                     Table "public.auth_user"
+    Column    |           Type           | Collation | Nullable |             Default
+--------------+--------------------------+-----------+----------+----------------------------------
+ id           | integer                  |           | not null | generated by default as identity
+ password     | character varying(128)   |           | not null |
+ last_login   | timestamp with time zone |           |          |
+ is_superuser | boolean                  |           | not null |
+ username     | character varying(150)   |           | not null |
+ first_name   | character varying(150)   |           | not null |
+ last_name    | character varying(150)   |           | not null |
+ email        | character varying(254)   |           | not null |
+ is_staff     | boolean                  |           | not null |
+ is_active    | boolean                  |           | not null |
+ date_joined  | timestamp with time zone |           | not null |
+Indexes:
+    "auth_user_pkey" PRIMARY KEY, btree (id)
+    "auth_user_username_6821ab7c_like" btree (username varchar_pattern_ops)
+    "auth_user_username_key" UNIQUE CONSTRAINT, btree (username)
+Referenced by:
+    TABLE "auth_user_groups" CONSTRAINT "auth_user_groups_user_id_6a12ed8b_fk_auth_user_id" FOREIGN KEY (user_id) REFERENCES auth_user(id) DEFERRABLE INITIALLY DEFERRED
+    TABLE "auth_user_user_permissions" CONSTRAINT "auth_user_user_permissions_user_id_a95ead1b_fk_auth_user_id" FOREIGN KEY (user_id) REFERENCES auth_user(id) DEFERRABLE INITIALLY DEFERRED
+    TABLE "django_admin_log" CONSTRAINT "django_admin_log_user_id_c564eba6_fk_auth_user_id" FOREIGN KEY (user_id) REFERENCES auth_user(id) DEFERRABLE INITIALLY DEFERRED
+```
+
+Por fim, vamos listar todos os usuários (com suas colunas) já cadastrados no Banco de Dados:
+
+```bash
+select * from auth_user;
+```
+
+**OUTPUT:**
+```bash
+ id |                                         password                                          |          last_login           | is_superuser | username | first_name | last_name |           email            | is_staff | is_active |          date_joined
+----+-------------------------------------------------------------------------------------------+-------------------------------+--------------+----------+------------+-----------+----------------------------+----------+-----------+-------------------------------
+  2 | pbkdf2_sha256$1000000$Q77ZUEe8nNZFT3DLvOBMRf$pLgNiCmXRUEaX0XGmC+JX8jTrNqS5I6QMVuutC3ypTw= |                               | f            | rodrigo  |            |           | rodrigo.praxedes@gmail.com | f        | t         | 2025-10-21 10:30:23.466991+00
+  3 | pbkdf2_sha256$1000000$93BBiOAKodPLbmgJJtbfBY$HLYRqEN5oCfmZKsA0iGkbbG+KbITmlz26BDl2xRMGbs= | 2025-11-02 09:19:36.900889+00 | f            | romario  |            |           | romario@gmail.com          | f        | t         | 2025-10-28 00:52:23.111699+00
+  4 | pbkdf2_sha256$1000000$AW4kQwpGOjvxBWaCg5EMkC$+YnHIhK29DhI8PMJQyx3SIuOnCHGUJgvuuc0XNDrEKs= | 2025-11-02 09:36:10.701396+00 | f            | brenda   |            |           | brenda@gmail.com           | f        | t         | 2025-11-02 09:36:05.24123+00
+  1 | pbkdf2_sha256$1000000$TwwCgqC0kp0GRli3xEyzhO$5r01g9G+sbI99a9a6cvgky5XudMjI/ADg+t5wO+1tHw= | 2025-11-02 10:07:32.909962+00 | t            | drigols  |            |           | drigols.creative@gmail.com | t        | t         | 2025-10-21 09:01:46.482399+00
+(4 rows)
+```
 
 
 
