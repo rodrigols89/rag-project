@@ -308,8 +308,6 @@ Boas práticas:
 
 ### `🎯 Vantagens desse fluxo`
 
- - **Velocidade:**
-   - Desenvolvimento fluido na `develop`, sem executar CI a cada mudança.
  - **Segurança:**
    - Nada chega na `main` sem passar por todos os testes.
  - **Qualidade:**
