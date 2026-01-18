@@ -273,18 +273,9 @@ flowchart TD
     DEVELOP["🛠️ <b>develop</b>
     <hr/>
     **Branch de desenvolvimento**<br/>
-    • Commits rápidos
-    • Sem CI obrigatório
-    • Pode conter código instável"]
-
-
-    CI["🧪 <b>ci</b>
-    <hr/>
-    **Ambiente dedicado para CI/CD**<br/>
     • Executa: lint, testes, coverage
     • Build Docker + validações
-    • Somente código aprovado segue"]
-
+    • Pode conter código instável"]
 
     MAIN["🚀 <b>main</b>
     <hr/>
@@ -293,8 +284,7 @@ flowchart TD
     • Pode acionar deploy"]
 
 
-    DEVELOP -->|"🔄 Pull Request / Merge"| CI
-    CI -->|"🔄 Pull Request / Merge"| MAIN
+    DEVELOP -->|"🔄 Pull Request / Merge"| MAIN
 ```
 
 ### `develop — Desenvolvimento Ativo`
@@ -302,28 +292,9 @@ flowchart TD
 > **A branch develop é utilizada para o trabalho diário.**
 
  - Aqui os commits são rápidos e frequentes, sem necessidade de executar pipelines de CI/CD.
+ - Rodam os testes e o lint.
+ - CI/CD são executados a cada push ou pull request.
  - Ela pode conter código instável, protótipos ou modificações ainda em validação.
-
-Principais características:
-
- - Alterações livres para acelerar o desenvolvimento;
- - Não executa *CI/CD* automaticamente (evita lentidão);
- - Serve como base para evolução contínua do projeto.
-
-### `ci-cd — Validação e Qualidade (CI/CD obrigatório)`
-
-> **Todo código destinado a entrar na main deve passar pela branch ci-cd.**
-
-Ela funciona como uma *“camada de proteção”*, garantindo que apenas commits totalmente validados avancem.
-
-Nesta branch o GitHub Actions executa:
-
- - verificação de lint;
- - testes automatizados;
- - análise de cobertura;
- - build e validação de Docker;
- - inspeções de segurança (opcional);
- - validação de ambiente completo via docker-compose.
 
 ### `main — Estável / Produção`
 
