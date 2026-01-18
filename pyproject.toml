@@ -93,11 +93,11 @@ omit = [
 # ------------------------ ( Linting ) ----------------------
 pre_lint = 'ruff check --fix'
 lint = 'ruff check'
-# ---------------------- ( Pre-Commit ) ---------------------
-precommit = 'pre-commit run --all-files'
 # ------------------------ ( Testing ) ----------------------
 test = "docker compose exec -T web pytest -s -x --cov=. -vv"
 post_test = 'docker compose exec -T web coverage html'
+# ---------------------- ( Pre-Commit ) ---------------------
+precommit = 'pre-commit run --all-files'
 # -------------- ( General Docker Management ) --------------
 start_compose = 'docker compose up -d'
 down_compose = 'docker compose down'
