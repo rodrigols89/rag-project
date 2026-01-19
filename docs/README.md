@@ -32,6 +32,7 @@
    - [`Testando se o app "users" está instalado no Django`](#test-users-app-is-installed)
    - [`Testando se a rota "/" está registrada corretamente`](#main-router-test)
    - [`Testando se um GET "/" retorna status HTTP 200`](#test-main-router-200)
+   - [`Testando se o formulário CustomUserCreationForm cria um usuário no banco`](#test-customusercreationform)
 <!---
 [WHITESPACE RULES]
 - Same topic = "40" Whitespace character.
@@ -6689,6 +6690,262 @@ Se você desejar rodar esse teste específico você pode executar o seguinte com
 ```bash
 pytest -s -x --cov=. -vv users/tests/test_views.py::test_root_get_returns_200
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+<div id="test-customusercreationform"></div>
+
+## `Testando se o formulário CustomUserCreationForm cria um usuário no banco`
+
+> Aqui, nós vamos criar um teste automatizado simples para garantir que o formulário de criação de usuário (`CustomUserCreationForm`) funciona corretamente quando os dados enviados são válidos.
+
+Em termos simples:
+
+ - simulamos o preenchimento correto do formulário
+ - pedimos para o Django validar os dados
+ - salvamos o formulário
+ - verificamos se um usuário foi realmente criado no banco de dados
+
+**NOTE:**  
+Mas, antes de criarmos esse teste nós precisamos de algumas configurações especiais para o nosso teste não utilizar nosso Banco de Dados real e sim um Banco de Dados de Teste.
+
+Primeiro, nós vamos criar um arquivo chamado [core/settings_test.py](../core/settings_test.py) que só terá configurações de teste:
+
+[core/settings_test.py](../core/settings_test.py)
+```python
+from .settings import *  # noqa: F403
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": ":memory:",
+    }
+}
+```
+
+Vejam que:
+
+ - Nós estamos importanto todas as configurações do nosso `settings.py`
+ - Porém, estamos sobreescrevendo apenas a configuração de Banco de Dados
+
+Agora, nós precisamos dizer ao Pytest para utilizar esse arquivo como configuração para teste:
+
+[pyproject.toml](../pyproject.toml)
+```toml
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "core.settings_test"
+```
+
+👉 Agora:
+
+ - produção → PostgreSQL
+ - desenvolvimento → Docker/Postgres
+ - testes → SQLite em memória
+
+Para iniciar nosso teste vamos começar criando uma **função de teste** chamada `test_custom_user_creation_form_creates_user()`:
+
+[users/tests/test_forms.py](../users/tests/test_forms.py)
+```python
+@pytest.mark.django_db
+def test_custom_user_creation_form_creates_user():
+    """
+    Testa se um formulário válido cria um usuário no banco de dados.
+    """
+    ...
+```
+
+> **NOTE:**  
+> O decorator `@pytest.mark.django_db` diz ao Pytest que esse teste precisa utilizar o Banco de Dados de Teste.
+
+### `🅰️ Arrange — Preparando o cenário`
+
+> Nesta etapa, nós vamos preparar os dados necessários para o teste.
+
+Para isso, precisamos importar:
+
+ - o formulário que queremos testar
+ - o modelo `User`, para consultar o banco depois
+
+[users/tests/test_forms.py](../users/tests/test_forms.py)
+```python
+from django.contrib.auth.models import User
+
+from users.forms import CustomUserCreationForm
+
+
+@pytest.mark.django_db
+def test_custom_user_creation_form_creates_user():
+    """
+    Testa se um formulário válido cria um usuário no banco de dados.
+    """
+    ...
+```
+
+Agora, ainda na etapa de Arrange, vamos criar um dicionário com dados válidos, simulando exatamente o que um usuário preencheria no formulário:
+
+[users/tests/test_forms.py](../users/tests/test_forms.py)
+```python
+@pytest.mark.django_db
+def test_custom_user_creation_form_creates_user():
+
+    ...
+
+    # Arrange
+    form_data = {
+        "username": "usuario_teste",
+        "email": "usuario_teste@email.com",
+        "password1": "SenhaForte123!",
+        "password2": "SenhaForte123!",
+    }
+```
+
+Em seguida, ainda no Arrange, criamos uma instância do formulário usando esses dados:
+
+[users/tests/test_forms.py](../users/tests/test_forms.py)
+```python
+@pytest.mark.django_db
+def test_custom_user_creation_form_creates_user():
+
+    ...
+
+    # Arrange
+    form_data = {
+        "username": "usuario_teste",
+        "email": "usuario_teste@email.com",
+        "password1": "SenhaForte123!",
+        "password2": "SenhaForte123!",
+    }
+
+    form = CustomUserCreationForm(data=form_data)
+```
+
+ - **📌 O que fizemos até aqui?**
+   - simulamos um preenchimento correto do formulário
+   - ainda não validamos
+   - ainda não salvamos
+   - apenas preparamos o cenário do teste
+
+### `🅰️🅰️ Act — Executando a ação`
+
+Agora vamos executar a ação principal do teste.
+
+> **👉 Validar o formulário e, se for válido, salvá-lo no banco.**
+
+[users/tests/test_forms.py](../users/tests/test_forms.py)
+```python
+@pytest.mark.django_db
+def test_custom_user_creation_form_creates_user():
+
+    ...
+
+        # Act
+    is_valid = form.is_valid()
+
+    if is_valid:
+        form.save()
+```
+
+Aqui acontecem várias coisas importantes automaticamente:
+
+ - **O Django:**
+   - valida campos obrigatórios
+   - verifica se as senhas coincidem
+   - executa clean_email()
+ - **Se tudo estiver correto:**
+   - `is_valid()` retorna `True`
+   - `form.save()` cria um usuário no banco
+
+### `🅰️🅰️🅰️ Assert — Verificando o resultado`
+
+Como esse teste deve ter apenas um `assert`, vamos focar em uma única garantia:
+
+> **👉 Existe exatamente um usuário no banco com o username informado?**
+
+[users/tests/test_forms.py](../users/tests/test_forms.py)
+```python
+@pytest.mark.django_db
+def test_custom_user_creation_form_creates_user():
+
+    ...
+
+    # ----------------- ( Assert ) ----------------
+    assert User.objects.filter(
+        username="usuario_teste"
+    ).exists()
+```
+
+
+> **O que esse assert garante?**
+
+ - Que o formulário foi validado corretamente
+ - Que o formulário foi salvo no banco de dados
+ - Que um usuário com o username informado foi criado
+
+### `Testando`
+
+Se você desejar rodar esse teste específico você pode executar o seguinte comando:
+
+```bash
+pytest -s -x --cov=. -vv users/tests/test_forms.py::test_custom_user_creation_form_creates_user
+```
+
+
+
+
+
+
 
 ---
 

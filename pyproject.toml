@@ -54,7 +54,7 @@ quote-style = "double"
 #############################################################
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "core.settings"
+DJANGO_SETTINGS_MODULE = "core.settings_test"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
 
 # Ativar automaticamente o pytest-django
@@ -63,7 +63,6 @@ django_find_project = true
 # Arquivos/códigos que devem ser ignorados pelo pytest
 [tool.coverage.run]
 omit = [
-    "*/tests/*",
     "*test_*.py",
     "*_test.py",
     "*_tests.py",
@@ -75,11 +74,6 @@ omit = [
 # Arquivos/códigos que devem ser ignorados no relatório de cobertura
 [tool.coverage.report]
 omit = [
-    "*/tests/*",
-    "*test_*.py",
-    "*_test.py",
-    "*_tests.py",
-    "tests.py",
     "*/migrations/*",
     "*/__init__.py",
 ]
@@ -94,6 +88,7 @@ omit = [
 pre_lint = 'ruff check --fix'
 lint = 'ruff check'
 # ------------------------ ( Testing ) ----------------------
+localtest = "pytest -s -x --cov=. -vv"
 test = "docker compose exec -T web pytest -s -x --cov=. -vv"
 post_test = 'docker compose exec -T web coverage html'
 # ---------------------- ( Pre-Commit ) ---------------------
