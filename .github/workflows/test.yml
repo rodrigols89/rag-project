@@ -7,14 +7,14 @@ on:
       - "**/*.py"
       - "requirements*.txt"
       - "pyproject.toml"
-      - ".github"
+      - ".github/**"
   pull_request:
     branches: [ develop ]
     paths:
       - "**/*.py"
       - "requirements*.txt"
       - "pyproject.toml"
-      - ".github"
+      - ".github/**"
 
 jobs:
   test-ci:
